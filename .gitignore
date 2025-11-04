@@ -1,0 +1,23 @@
+# PyCharm / IntelliJ
+.idea/
+
+# Środowisko Pythona
+venv/
+env/
+__pycache__/
+*.pyc
+
+# Pliki konfiguracyjne i sekrety
+*.env
+*.env.*
+.env
+
+# Pliki audio
+*.mp3
+
+# Logi
+*.log
+
+# Systemowe
+.DS_Store
+Thumbs.db
