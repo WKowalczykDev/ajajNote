@@ -8,7 +8,7 @@ load_dotenv()
 
 aai.settings.api_key = os.getenv("ASSEMBLYAI_API_KEY")
 
-audio_file = "./audio_files/spotkanie_WRSS1.mp3"
+audio_file = "./audio_files/starosci.mp3"
 
 # Konfiguracja z językiem polskim i DIARYZACJĄ
 config = aai.TranscriptionConfig(
@@ -73,7 +73,6 @@ for speaker in sorted(speakers_text.keys()):
     print(f"  Liczba wypowiedzi: {len(speakers_text[speaker])}")
     print(f"  Pełny tekst:")
     full_text = " ".join(speakers_text[speaker])
-    print(f"  {full_text[:500]}...")  # Pierwsze 500 znaków
 
 print("\n" + "=" * 80)
 print(f"Czas transkrypcji: {elapsed_time:.2f} sekund ({elapsed_time / 60:.2f} minut)")
@@ -83,19 +82,19 @@ print("=" * 80)
 # ========== OPCJONALNIE: ZAPIS DO PLIKÓW ==========
 
 # Zapisz pełną transkrypcję z timestampami
-with open("./transcripts/transkrypcja_timeline.txt", "w", encoding="utf-8") as f:
+with open("./transcripts/starosci.txt", "w", encoding="utf-8") as f:
     for utterance in transcript.utterances:
         start = utterance.start / 1000
         end = utterance.end / 1000
         f.write(f"[{start:.2f}s - {end:.2f}s] {utterance.speaker}:\n")
         f.write(f"{utterance.text}\n\n")
 
-print("\n✓ Zapisano: ./transcripts/transkrypcja_timeline.txt")
+print("\n✓ Zapisano: ./transcripts/starosci.txt")
 
-# Zapisz osobne pliki dla każdego mówcy
-for speaker, texts in speakers_text.items():
-    filename = f"transkrypcja_{speaker}.txt"
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(f"=== {speaker} ===\n\n")
-        f.write(" ".join(texts))
-    print(f"✓ Zapisano: {filename}")
+# # Zapisz osobne pliki dla każdego mówcy
+# for speaker, texts in speakers_text.items():
+#     filename = f"transkrypcja_{speaker}.txt"
+#     with open(filename, "w", encoding="utf-8") as f:
+#         f.write(f"=== {speaker} ===\n\n")
+#         f.write(" ".join(texts))
+#     print(f"✓ Zapisano: {filename}")

@@ -1,0 +1,55 @@
+Jesteś ekspertem w rekonstrukcji uszkodzonych transkrypcji. Masz do czynienia z nagraniem niskiej jakości.
+
+TRANSKRYPCJA (Z BŁĘDAMI):
+{transcription}
+
+ZNANE PROBLEMY:
+- Szumy tła i echo
+- Pomyłki w rozpoznawaniu słów
+- Brakujące fragmenty
+- Mylne przypisanie mówców
+
+ZADANIE - ANALIZA FORENSYCZNA:
+
+## 1️⃣ DIAGNOZA JAKOŚCI
+**Ogólna ocena**: [1-10]
+**Problematyczne fragmenty**:
+- [XX:XX - YY:YY]: [opis problemu]
+
+## 2️⃣ REKONSTRUKCJA TEKSTU
+
+Dla każdego fragmentu:
+[ORYGINALNY ZAPIS]
+"[tekst z błędami]"
+
+[PRAWDOPODOBNA INTERPRETACJA]
+"[poprawiona wersja]"
+
+[POZIOM PEWNOŚCI]: ⭐⭐⭐⭐☆ (4/5)
+
+## 3️⃣ WERYFIKACJA MÓWCÓW
+| Timestamp | Przypisany | Prawdopodobny | Pewność |
+|-----------|-----------|---------------|---------|
+| 00:15     | Mówca A   | Mówca B (?)   | 60%     |
+
+## 4️⃣ WYPEŁNIANIE LUK
+
+Dla brakujących fragmentów:
+[XX:XX] [LUKA - 15 sekund]
+Kontekst przed: "..."
+Kontekst po: "..."
+Prawdopodobna treść: [hipoteza oparta na kontekście]
+
+## 5️⃣ KONSPEKT Z ZASTRZEŻENIAMI
+
+[Standardowy konspekt z oznaczeniami:]
+- ✅ Fragmenty pewne
+- ⚠️ Fragmenty zrekonstruowane
+- ❌ Fragmenty niemożliwe do odtworzenia
+
+## 6️⃣ REKOMENDACJE
+- Które fragmenty wymagają ponownego nagrania?
+- Jakie usprawnienia techniczne zaproponować?
+- Alternatywne źródła informacji (notatki uczestników, slajdy)?
+
+FILOZOFIA: Lepiej oznaczyć niepewność niż wymyślać treść.

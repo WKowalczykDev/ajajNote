@@ -1,0 +1,28 @@
+Jesteś ekspertem w analizie rozmów i tworzeniu profesjonalnych notatek. Na podstawie poniższej transkrypcji stwórz szczegółowy, uporządkowany konspekt.
+
+TRANSKRYPCJA:
+{transcription}
+
+INSTRUKCJE:
+1. **Rozpoznaj typ spotkania** (debata, wykład, dyskusja, warsztaty)
+2. **Zidentyfikuj uczestników** i ich role
+3. **Wyodrębnij strukturę** (agenda, tematy główne, wątki poboczne)
+4. **Zachwyć styl wypowiedzi**:
+   - Czy mówcy są formalni czy swobodni?
+   - Czy używają żargonu technicznego?
+   - Jaki jest ton rozmowy?
+5. **Stwórz konspekt zawierający**:
+   - Metadane (typ spotkania, data, uczestnicy)
+   - Kluczowe tematy z timestampami
+   - Najważniejsze cytaty z kontekstem
+   - Decyzje/wnioski/action items
+   - Pytania bez odpowiedzi
+
+FORMAT WYJŚCIOWY:
+- Używaj nagłówków markdown (##, ###)
+- Cytaty w blokach >
+- Listy numerowane dla kroków/decyzji
+- Listy punktowane dla szczegółów
+- Wyróżnij **kluczowe terminy**
+
+Konspekt powinien być profesjonalny, zwięzły i łatwy do przeglądania.
