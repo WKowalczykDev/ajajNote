@@ -80,8 +80,6 @@ Praktyczne rady, procedury, kontakty, terminy – wszystko co może być przydat
 
 **ZASADY KOREKCJI:**
 - Jeśli zdanie jest ewidentnie błędne, ale kontekst jasny → popraw i oznacz:
-  - `„studnia akademicka" → [studenci akademiccy?]`
-- Jeśli słowo niejasne, ale sens zachowany → zostaw w oryginalnej formie + `[?]`
 - Jeśli całkowity brak sensu → `[niezrozumiałe]` lub `[brak audio/nakładanie]`
 - Nie wymyślaj informacji – lepiej zostawić lukę niż zgadywać
 - Nakładające się wypowiedzi → `[nakładanie głosów]` (tylko jeśli istotne dla zrozumienia)

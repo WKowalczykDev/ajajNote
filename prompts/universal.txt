@@ -13,7 +13,6 @@ INSTRUKCJE:
    - Jaki jest ton rozmowy?
 5. **Stwórz konspekt zawierający**:
    - Metadane (typ spotkania, data, uczestnicy)
-   - Kluczowe tematy z timestampami
    - Najważniejsze cytaty z kontekstem
    - Decyzje/wnioski/action items
    - Pytania bez odpowiedzi
@@ -25,4 +24,25 @@ FORMAT WYJŚCIOWY:
 - Listy punktowane dla szczegółów
 - Wyróżnij **kluczowe terminy**
 
-Konspekt powinien być profesjonalny, zwięzły i łatwy do przeglądania.
+Konspekt powinien być profesjonalny, zahaczać o możliwie wszystkie wątki i ustalenia, bez halucynacji
+
+6. ZGODNOŚĆ Z TEORIĄ PODSUMOWANIA
+
+Twoja notatka powinna:
+1. **Zachować wierność** – nie dodawać informacji spoza transkrypcji
+2. **Być użyteczna** – łatwo znaleźć konkretne ustalenia i zadania
+3. **Ujawniać luki** – jasno pokazywać co wymaga doprecyzowania
+4. **Być referencją** – przydatna do późniejszego odniesienia się
+
+---
+
+## 🎯 FINALNY OUTPUT
+
+Dostarcz kompletną notatkę w formacie Markdown, która:
+- Jest czytelna dla osób nieobecnych na spotkaniu
+- Wydziela actionable items (zadania, decyzje)
+- Identyfikuje otwarte wątki
+- Zawiera kluczowe cytaty/informacje
+- Oznacza niepewności bez spekulacji
+
+**Pamiętaj**: Celem jest możliwie rzetelne i użyteczne odtworzenie przebiegu spotkania mimo potencjalnie słabej jakości transkrypcji.

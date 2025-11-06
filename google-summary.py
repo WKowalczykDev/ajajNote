@@ -1,4 +1,5 @@
-from huggingface_hub import InferenceClient
+from google import genai
+from google.genai import types
 import os
 from datetime import datetime
 from dotenv import load_dotenv
@@ -11,11 +12,8 @@ class TranscriptionAnalyzer:
     """System analizy transkrypcji dla różnych typów spotkań"""
 
     def __init__(self, api_key):
-        self.client = InferenceClient(
-            provider="novita",
-            api_key=api_key
-        )
-        self.model = "deepseek-ai/DeepSeek-R1"
+        self.client = genai.Client(api_key=api_key)
+        self.model = "models/gemini-2.5-pro"
         self.prompts_dir = "prompts"
 
     def load_transcription(self, filepath):
@@ -61,19 +59,34 @@ class TranscriptionAnalyzer:
         print(f"🔄 Analizuję transkrypcję ({prompt_type})...")
 
         try:
-
             start_time = time.perf_counter()
-            response = self.client.chat.completions.create(
+
+            contents = [
+                types.Content(
+                    role="user",
+                    parts=[types.Part.from_text(text=prompt)]
+                )
+            ]
+
+            config = types.GenerateContentConfig(
+                temperature=0.2,
+                top_p=0.8,
+                top_k=40
+            )
+
+            response = self.client.models.generate_content(
                 model=self.model,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ],
+                contents=contents,
+                config=config
             )
 
             end_time = time.perf_counter()
             execution_time = end_time - start_time
 
-            result = response.choices[0].message.content
+            result = ""
+            for part in response.candidates[0].content.parts:
+                result += part.text
+
             print("✅ Analiza zakończona")
             print(f"⏱ Czas wykonania: {execution_time:.2f} s")
             return result
@@ -85,7 +98,7 @@ class TranscriptionAnalyzer:
 
 def main():
     """Przykłady użycia systemu"""
-    API_KEY = os.getenv("HUGGINGFACE_API_KEY")
+    API_KEY = os.getenv("GOOGLE_API_KEY")
     analyzer = TranscriptionAnalyzer(API_KEY)
 
     print("=" * 60)
@@ -112,15 +125,15 @@ def main():
         "5": "difficult",
         "6": "wrss",
         "7": "lecture_better",
-        "8":"starosci",
+        "8": "starosci",
         "": "universal"
     }
 
     mode = mode_map.get(choice, "universal")
 
-    filename = input("\nPodaj nazwę pliku (domyślnie: transcripts/transkrypcja_timeline.txt): ").strip()
+    filename = input("\nPodaj nazwę pliku (domyślnie: transcripts/starosci-gemini.txt): ").strip()
     if not filename:
-        filename = "transcripts/starosci-gemini.txt"
+        filename = "transcripts/tr-rnd-it.txt"
 
     transcription = analyzer.load_transcription(filename)
     output_name = ""
@@ -128,7 +141,6 @@ def main():
         result = analyzer.analyze(transcription, prompt_type=mode)
 
         if result:
-
             output_name = f"konspekt_{mode}"
             analyzer.save_output(result, output_name)
 

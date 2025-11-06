@@ -12,10 +12,10 @@ class TranscriptionAnalyzer:
 
     def __init__(self, api_key):
         self.client = InferenceClient(
-            provider="novita",
+            provider="hf-inference",
             api_key=api_key
         )
-        self.model = "deepseek-ai/DeepSeek-R1"
+        self.model = "Falconsai/text_summarization"
         self.prompts_dir = "prompts"
 
     def load_transcription(self, filepath):
@@ -63,11 +63,9 @@ class TranscriptionAnalyzer:
         try:
 
             start_time = time.perf_counter()
-            response = self.client.chat.completions.create(
+            response = self.client.summarization(
+                prompt,
                 model=self.model,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ],
             )
 
             end_time = time.perf_counter()
@@ -129,7 +127,7 @@ def main():
 
         if result:
 
-            output_name = f"konspekt_{mode}"
+            output_name = f"md/konspekt_{mode}"
             analyzer.save_output(result, output_name)
 
     print(f"\n✅ Zakończono i zapisano jako {output_name}...")
