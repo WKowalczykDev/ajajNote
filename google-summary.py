@@ -38,7 +38,7 @@ class TranscriptionAnalyzer:
     def save_output(self, content, output_name):
         """Zapisuje wynik do pliku"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{output_name}_{timestamp}.md"
+        filename = f"md/{output_name}_{timestamp}.md"
 
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(content)
@@ -133,7 +133,7 @@ def main():
 
     filename = input("\nPodaj nazwę pliku (domyślnie: transcripts/starosci-gemini.txt): ").strip()
     if not filename:
-        filename = "transcripts/tr-rnd-it.txt"
+        filename = "transcripts/zamarzanie_wody.txt"
 
     transcription = analyzer.load_transcription(filename)
     output_name = ""

@@ -16,7 +16,7 @@ class TranscriptionAnalyzer:
             api_key=api_key
         )
         self.model = "deepseek-ai/DeepSeek-R1"
-        self.prompts_dir = "prompts"
+        self.prompts_dir = "../prompts"
 
     def load_transcription(self, filepath):
         """Wczytuje transkrypcję z pliku"""
@@ -120,7 +120,7 @@ def main():
 
     filename = input("\nPodaj nazwę pliku (domyślnie: transcripts/transkrypcja_timeline.txt): ").strip()
     if not filename:
-        filename = "transcripts/starosci-gemini.txt"
+        filename = "../transcripts/starosci-gemini.txt"
 
     transcription = analyzer.load_transcription(filename)
     output_name = ""

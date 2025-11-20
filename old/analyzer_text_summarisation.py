@@ -12,11 +12,11 @@ class TranscriptionAnalyzer:
 
     def __init__(self, api_key):
         self.client = InferenceClient(
-            provider="novita",
+            provider="hf-inference",
             api_key=api_key
         )
-        self.model = "meta-llama/Llama-3.3-70B-Instruct"
-        self.prompts_dir = "prompts"
+        self.model = "Falconsai/text_summarization"
+        self.prompts_dir = "../prompts"
 
     def load_transcription(self, filepath):
         """Wczytuje transkrypcję z pliku"""
@@ -63,11 +63,9 @@ class TranscriptionAnalyzer:
         try:
 
             start_time = time.perf_counter()
-            response = self.client.chat.completions.create(
+            response = self.client.summarization(
+                prompt,
                 model=self.model,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ],
             )
 
             end_time = time.perf_counter()
@@ -112,7 +110,7 @@ def main():
         "5": "difficult",
         "6": "wrss",
         "7": "lecture_better",
-        "8": "starosci",
+        "8":"starosci",
         "": "universal"
     }
 
@@ -120,7 +118,7 @@ def main():
 
     filename = input("\nPodaj nazwę pliku (domyślnie: transcripts/transkrypcja_timeline.txt): ").strip()
     if not filename:
-        filename = "transcripts/transkrypcja_timeline.txt"
+        filename = "../transcripts/starosci-gemini.txt"
 
     transcription = analyzer.load_transcription(filename)
     output_name = ""
@@ -129,7 +127,7 @@ def main():
 
         if result:
 
-            output_name = f"konspekt_{mode}"
+            output_name = f"md/konspekt_{mode}"
             analyzer.save_output(result, output_name)
 
     print(f"\n✅ Zakończono i zapisano jako {output_name}...")
