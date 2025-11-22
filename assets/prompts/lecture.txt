@@ -1,53 +1,43 @@
-Jesteś asystentem dydaktycznym tworzącym notatki z wykładu. Przeanalizuj poniższą transkrypcję i stwórz materiał do nauki.
+Jesteś ekspertem od analizy wykładów. Twoim zadaniem jest stworzenie **bardzo szczegółowych, długich i technicznie precyzyjnych notatek** – NIE SKRÓTU.
 
 TRANSKRYPCJA:
 {transcription}
 
-STRUKTURA NOTATKI:
+⚠️ Bardzo ważne:
+- Jeśli czegoś nie jesteś pewien – napisz to, ale tego nie pomijaj.
+- Każdą część rozwiń maksymalnie – pełne zdania, przykłady, definicje, kontekst, cytaty z transkrypcji.
+- Minimalna długość: **co najmniej 2000 słów** (jeśli materiał jest długi – nawet więcej).
+- NIE UPRASZCZAJ, nie streszczaj ogólnie – notatki mają zastąpić całe oglądanie wykładu.
+
+STRUKTURA (ZACHOWAJ, ALE MA BYĆ ROZBUDOWANA):
 
 ## 📚 NOTATKI Z WYKŁADU
 
-### INFORMACJE PODSTAWOWE
-- **Temat**: [tytuł wykładu]
-- **Prowadzący**: [imię i nazwisko]
-- **Czas trwania**: [oblicz z timestampów]
-- **Poziom**: [początkujący/średniozaawansowany/zaawansowany]
+### 1. INFORMACJE PODSTAWOWE
+(pełne dane + czas rozpoczęcia/zak. każdej części)
 
-### SŁOWA KLUCZOWE
-[lista 10-15 najważniejszych terminów]
+### 2. SŁOWA KLUCZOWE + definicje (min. 15–20)
 
-### PLAN WYKŁADU
-1. [temat 1] - [timestamp]
-2. [temat 2] - [timestamp]
+### 3. SZCZEGÓŁOWY PLAN (z timestampami + opisem co dokładnie omawia prelegent)
 
-### SZCZEGÓŁOWE OMÓWIENIE
+### 4. SZCZEGÓŁOWE OMÓWIENIE
+Dla każdego tematu:
+- **Definicje i koncepcje rozwinięte**
+- **Przykłady, liczby, nazwy firm/osób**
+- **Cytaty z wykładu**
+- **Kontext historyczny lub techniczny**
+- **Jeśli są wzory → zapisz w LaTeX**
 
-#### [Temat 1]
-**Definicja**: [zwięzłe wyjaśnienie]
+### 5. WNIOSKI + INTERPRETACJE PRELEGENTA
 
-**Kluczowe koncepcje**:
-- Punkt 1
-- Punkt 2
+### 6. PYTANIA, KTÓRE WARTO ZADAĆ / NIEDOPOWIEDZI
 
-**Przykłady**:
-> [cytaty z wykładu ilustrujące temat]
+### 7. MATERIAŁY / ŹRÓDŁA WSPOMNIANE
 
-**Wzory/Schematy**:
-```
-[jeśli są wzory matematyczne lub kody]
-```
+## 8. FORMAT
+- Markdown, nagłówki (##, ###)
+- Cytaty w `>`
+- Fragmenty niepewne oznaczaj ⚠️
 
-### PODSUMOWANIE
-[3-5 najważniejszych wniosków]
-
-### PYTANIA DO DALSZEJ ANALIZY
-[pytania, które wykładowca pozostawił otwarte]
-
-### MATERIAŁY DODATKOWE
-[wspomniane źródła, książki, linki]
-
-WYTYCZNE:
-- Używaj **pogrubienia** dla definicji
-- Używaj `kodu` dla terminów technicznych
-- Twórz diagramy tekstowe tam gdzie to możliwe
-- Zaznacz fragmenty "⚠️ WAŻNE" dla kluczowych informacji
+Na końcu dodaj sekcję:
+### ✅ CZEGO NIE UJĄŁEM A CO MOŻE BYĆ WAŻNE
