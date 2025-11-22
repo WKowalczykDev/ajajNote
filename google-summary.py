@@ -14,7 +14,7 @@ class TranscriptionAnalyzer:
     def __init__(self, api_key):
         self.client = genai.Client(api_key=api_key)
         self.model = "models/gemini-2.5-pro"
-        self.prompts_dir = "prompts"
+        self.prompts_dir = "assets/prompts"
 
     def load_transcription(self, filepath):
         """Wczytuje transkrypcję z pliku"""
@@ -133,7 +133,7 @@ def main():
 
     filename = input("\nPodaj nazwę pliku (domyślnie: transcripts/starosci-gemini.txt): ").strip()
     if not filename:
-        filename = "transcripts/zamarzanie_wody.txt"
+        filename = "OUTPUT/transcripts/zamarzanie_wody.txt"
 
     transcription = analyzer.load_transcription(filename)
     output_name = ""

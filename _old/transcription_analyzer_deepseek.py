@@ -15,8 +15,8 @@ class TranscriptionAnalyzer:
             provider="novita",
             api_key=api_key
         )
-        self.model = "meta-llama/Llama-3.3-70B-Instruct"
-        self.prompts_dir = "../prompts"
+        self.model = "deepseek-ai/DeepSeek-R1"
+        self.prompts_dir = "../assets/prompts"
 
     def load_transcription(self, filepath):
         """Wczytuje transkrypcję z pliku"""
@@ -112,7 +112,7 @@ def main():
         "5": "difficult",
         "6": "wrss",
         "7": "lecture_better",
-        "8": "starosci",
+        "8":"starosci",
         "": "universal"
     }
 
@@ -120,7 +120,7 @@ def main():
 
     filename = input("\nPodaj nazwę pliku (domyślnie: transcripts/transkrypcja_timeline.txt): ").strip()
     if not filename:
-        filename = "../transcripts/transkrypcja_timeline.txt"
+        filename = "../OUTPUT/transcripts/starosci-gemini.txt"
 
     transcription = analyzer.load_transcription(filename)
     output_name = ""
