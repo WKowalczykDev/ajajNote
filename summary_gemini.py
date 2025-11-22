@@ -1,19 +1,23 @@
+import os
+
 from google import genai
 from google.genai import types
-import os
-from dotenv import load_dotenv
 
-load_dotenv()
 
 
 class TranscriptionAnalyzer:
     """Analyzer transkrypcji używający Gemini"""
 
-    def __init__(self, api_key=None):
-        self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
+    def __init__(self, api_key=None, model="models/gemini-2.5-pro",
+                 prompt_path="assets/prompts/universal.txt",
+                 temperature=0.2, top_p=0.8, top_k=40):
+        self.api_key = api_key
         self.client = genai.Client(api_key=self.api_key)
-        self.model = "models/gemini-2.5-pro"
-        self.prompt_path = "assets/prompts/universal.txt"
+        self.model = model
+        self.prompt_path = prompt_path
+        self.temperature = temperature
+        self.top_k = top_k
+        self.top_p = top_p
         self.last_output = None
 
     def load_prompt(self):
@@ -44,9 +48,9 @@ class TranscriptionAnalyzer:
             ]
 
             config = types.GenerateContentConfig(
-                temperature=0.2,
-                top_p=0.8,
-                top_k=40
+                temperature=self.temperature,
+                top_p=self.top_p,
+                top_k=self.top_k,
             )
 
             response = self.client.models.generate_content(
