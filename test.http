@@ -1,0 +1,9 @@
+### Upload file
+POST http://localhost:5000/send
+Content-Type: multipart/form-data; boundary=----boundary
+
+------boundary
+Content-Disposition: form-data; name="audio"; filename="starosci.mp3"
+Content-Type: application/octet-stream
+
+< ./INPUT/audio_files/zamarzanie_wody.mp3
