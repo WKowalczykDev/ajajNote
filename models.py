@@ -66,6 +66,8 @@ class User(db.Model):
             data['private_directory'] = self.private_directory
         return data
 
+
+
 def create_user_directory(directory_name):
     """Create user's private directory"""
     base_path = 'user_files'

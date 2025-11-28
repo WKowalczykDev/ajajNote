@@ -29,8 +29,12 @@ def create_app():
     # Register blueprints
     from routes.main import main_bp
     app.register_blueprint(main_bp)
+
     from routes.user import auth_bp
     app.register_blueprint(auth_bp)
+
+    from routes.notes import  notes_bp
+    app.register_blueprint(notes_bp)
 
     # Create database tables
     with app.app_context():
