@@ -45,7 +45,7 @@ def transform(filename):
     try:
         analysis = analyzer.analyze(transcript_out)
         if analysis:
-            analyzer.save(analysis, str(config.OUTPUT_DIR / filename ) + "_analysis.md")
+            analyzer.save(analysis, str(config.ANALYSIS_DIR / filename ) + "_analysis.md")
             print(f"✅ Analiza zakończona\n")
         else:
             print("❌ Analiza nie powiodła się")
@@ -56,4 +56,4 @@ def transform(filename):
 
     # PODSUMOWANIE
     print(f"📝 Transkrypcja: {str(config.TRANSCRIPTS_DIR / filename ) + "_transcript.txt"}")
-    print(f"📊 Analiza: {str(config.OUTPUT_DIR / filename ) + "_analysis.md"}")
+    print(f"📊 Analiza: {str(config.ANALYSIS_DIR / filename ) + "_analysis.md"}")
