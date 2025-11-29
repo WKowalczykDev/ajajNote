@@ -93,6 +93,10 @@ def process_audio(note_id):
               note=directories['md'],
               filename = note.filename)
 
+    if status == 200:
+        note.status = 'processed'
+        db.session.commit()
+
     return jsonify({'message': msg}), status
 
 
@@ -142,22 +146,22 @@ def read_note_files(note, user_dirs=None):
     return transcription, note_content
 
 
-def delete_note_files(note):
-    """Delete note files from disk"""
-    user = User.query.get(note.user_id)
-    user_dirs = get_user_directories(user)
-
-    # Delete transcription file
-    transcript_filename = f"note_{note.id}_transcript.txt"
-    transcript_path = os.path.join(user_dirs['transcripts'], transcript_filename)
-    if os.path.exists(transcript_path):
-        os.remove(transcript_path)
-
-    # Delete note content file
-    md_filename = f"note_{note.id}_content.md"
-    md_path = os.path.join(user_dirs['md'], md_filename)
-    if os.path.exists(md_path):
-        os.remove(md_path)
+# def delete_note_files(note):
+#     """Delete note files from disk"""
+#     user = User.query.get(note.user_id)
+#     user_dirs = get_user_directories(user)
+#
+#     # Delete transcription file
+#     transcript_filename = f"note_{note.id}_transcript.txt"
+#     transcript_path = os.path.join(user_dirs['transcripts'], transcript_filename)
+#     if os.path.exists(transcript_path):
+#         os.remove(transcript_path)
+#
+#     # Delete note content file
+#     md_filename = f"note_{note.id}_content.md"
+#     md_path = os.path.join(user_dirs['md'], md_filename)
+#     if os.path.exists(md_path):
+#         os.remove(md_path)
 
     # Note: We do NOT delete the audio file (mp3) from uploads directory
 
@@ -175,7 +179,7 @@ def get_notes():
     status = request.args.get('status')
 
     # Build query
-    query = Note.query.filter_by(user_id=current_user_email)
+    query = Note.query.filter_by(user_id=user.id)
 
     if status:
         query = query.filter_by(status=status)
@@ -278,64 +282,64 @@ def get_note(note_id):
 #         return jsonify({'error': f'Failed to update note: {str(e)}'}), 500
 
 
-# DELETE - Delete own note (user)
-@notes_bp.route('/<int:note_id>', methods=['DELETE'])
-@jwt_required()
-def delete_note(note_id):
-    """Delete a note (user can only delete their own)"""
-    current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
-
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-
-    note = Note.query.get(note_id)
-
-    if not note:
-        return jsonify({'error': 'Note not found'}), 404
-
-    # Check if user owns the note
-    if note.user_id != current_user_id:
-        return jsonify({'error': 'Access denied'}), 403
-
-    try:
-        # Delete files from disk
-        delete_note_files(note)
-
-        # Delete from database
-        db.session.delete(note)
-        db.session.commit()
-
-        return jsonify({'message': 'Note deleted successfully'}), 200
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': f'Failed to delete note: {str(e)}'}), 500
-
-
-# ADMIN - Delete any note
-@notes_bp.route('/<int:note_id>', methods=['DELETE'])
-@admin_required()
-def admin_delete_note(note_id):
-    """Admin endpoint to delete any note"""
-    note = Note.query.get(note_id)
-
-    if not note:
-        return jsonify({'error': 'Note not found'}), 404
-
-    try:
-        # Delete files from disk
-        delete_note_files(note)
-
-        # Delete from database
-        db.session.delete(note)
-        db.session.commit()
-
-        return jsonify({'message': 'Note deleted successfully by admin'}), 200
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': f'Failed to delete note: {str(e)}'}), 500
+# # DELETE - Delete own note (user)
+# @notes_bp.route('/<int:note_id>', methods=['DELETE'])
+# @jwt_required()
+# def delete_note(note_id):
+#     """Delete a note (user can only delete their own)"""
+#     current_user_id = get_jwt_identity()
+#     user = User.query.get(current_user_id)
+#
+#     if not user:
+#         return jsonify({'error': 'User not found'}), 404
+#
+#     note = Note.query.get(note_id)
+#
+#     if not note:
+#         return jsonify({'error': 'Note not found'}), 404
+#
+#     # Check if user owns the note
+#     if note.user_id != current_user_id:
+#         return jsonify({'error': 'Access denied'}), 403
+#
+#     try:
+#         # Delete files from disk
+#         delete_note_files(note)
+#
+#         # Delete from database
+#         db.session.delete(note)
+#         db.session.commit()
+#
+#         return jsonify({'message': 'Note deleted successfully'}), 200
+#
+#     except Exception as e:
+#         db.session.rollback()
+#         return jsonify({'error': f'Failed to delete note: {str(e)}'}), 500
+#
+#
+# # ADMIN - Delete any note
+# @notes_bp.route('/<int:note_id>', methods=['DELETE'])
+# @admin_required()
+# def admin_delete_note(note_id):
+#     """Admin endpoint to delete any note"""
+#     note = Note.query.get(note_id)
+#
+#     if not note:
+#         return jsonify({'error': 'Note not found'}), 404
+#
+#     try:
+#         # Delete files from disk
+#         delete_note_files(note)
+#
+#         # Delete from database
+#         db.session.delete(note)
+#         db.session.commit()
+#
+#         return jsonify({'message': 'Note deleted successfully by admin'}), 200
+#
+#     except Exception as e:
+#         db.session.rollback()
+#         return jsonify({'error': f'Failed to delete note: {str(e)}'}), 500
 
 
 # ADMIN - Get all notes (all users)

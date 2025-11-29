@@ -33,7 +33,7 @@ class Note(db.Model):
             'user_id': self.user_id,
             'meeting_time': self.meeting_time,
             'note_content': self.note_content,
-            'audio_dir': self.audio_dir,
+            'filename': self.filename,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'status': self.status
