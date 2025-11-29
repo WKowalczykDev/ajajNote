@@ -15,16 +15,13 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 # ==================== ŚCIEŻKI KATALOGÓW ====================
 # Katalog główny projektu
 
-# Katalogi INPUT
-AUDIO_FILES_DIR = Path("uploads")
-
 # Katalogi OUTPUT
 OUTPUT_DIR = Path("outputs")
 TRANSCRIPTS_DIR = OUTPUT_DIR / "transcripts"
 ANALYSIS_DIR = OUTPUT_DIR / "md"
 
 # Katalog z promptami
-PROMPTS_DIR = Path("assets") / "prompts"
+PROMPTS_DIR = Path("textTransform/assets/prompts")
 
 # ==================== KONFIGURACJA MODELI ====================
 # Model Gemini do analizy
@@ -50,21 +47,6 @@ PROMPT_TYPES = {
 ACTIVE_PROMPT_TYPE = "universal"
 ACTIVE_PROMPT_PATH = PROMPTS_DIR / PROMPT_TYPES[ACTIVE_PROMPT_TYPE]
 
-
-# ==================== FUNKCJE POMOCNICZE ====================
-def ensure_directories():
-    """Tworzy wszystkie wymagane katalogi, jeśli nie istnieją"""
-    directories = [
-        AUDIO_FILES_DIR,
-        OUTPUT_DIR,
-        TRANSCRIPTS_DIR,
-        ANALYSIS_DIR,
-    ]
-
-    for directory in directories:
-        directory.mkdir(parents=True, exist_ok=True)
-
-    print("✓ Wszystkie katalogi gotowe")
 
 
 def validate_config():
@@ -103,6 +85,5 @@ def print_config_summary():
 # ==================== INICJALIZACJA ====================
 if __name__ == "__main__":
     print("🔧 Testowanie konfiguracji...\n")
-    ensure_directories()
     validate_config()
     print_config_summary()

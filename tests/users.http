@@ -1,37 +1,29 @@
-### ============================================
 ###  SIGNUP
-### ============================================
 
 POST http://localhost:5000/auth/signup
 Content-Type: application/json
 
 {
-  "name": "Test2",
-  "email": "test2@example.com",
+  "name": "Test",
+  "email": "test@example.com",
   "password": "password123"
 }
-### ============================================
+
 ###  LOGIN
-### ============================================
 
 POST http://localhost:5000/auth/login
 Content-Type: application/json
 
 {
-  "email": "test2@example.com",
+  "email": "test@example.com",
   "password": "password123"
 }
 
 ### GET CURRENT USER (/me)
-###
-### ============================================
-### LOGOUT
 
 GET http://localhost:5000/auth/me
 
-### ============================================
 ###  UPDATE CURRENT USER
-### ============================================
 
 PUT http://localhost:5000/auth/me
 Content-Type: application/json
@@ -40,15 +32,11 @@ Content-Type: application/json
   "name": "Updated Test User"
 }
 
-### ============================================
 ###  LOGOUT
-### ============================================
 
 POST http://localhost:5000/auth/logout
 
-### ============================================
 ###  ADMIN LOGIN (hardcoded admin)
-### ============================================
 
 POST http://localhost:5000/auth/login
 Content-Type: application/json
@@ -58,23 +46,16 @@ Content-Type: application/json
   "password": "admin123"
 }
 
-### ============================================
 ###  ADMIN GET ALL USERS
-### ============================================
 
 GET http://localhost:5000/auth/users
 
-###
 
-### ============================================
 ###  ADMIN GET USER BY ID
-### ============================================
 
 GET http://localhost:5000/auth/users/1
 
-### ============================================
 ###  ADMIN UPDATE USER
-### ============================================
 
 PUT http://localhost:5000/auth/users/1
 Content-Type: application/json
@@ -84,11 +65,7 @@ Content-Type: application/json
   "is_admin": false
 }
 
-###
-
-### ============================================
 ###  ADMIN DELETE USER
-### ============================================
 
 DELETE http://localhost:5000/auth/users/3
 

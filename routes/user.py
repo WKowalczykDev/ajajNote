@@ -259,6 +259,7 @@ def delete_user(user_id):
     try:
         db.session.delete(user)
         db.session.commit()
+        user.delete_user_directory()
 
         return jsonify({'message': 'User deleted successfully'}), 200
 

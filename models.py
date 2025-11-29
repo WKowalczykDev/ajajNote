@@ -1,5 +1,6 @@
 import os
 import secrets
+import shutil
 from datetime import datetime
 
 from flask import current_app
@@ -16,7 +17,7 @@ class Note(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     transcription = db.Column(db.Text, nullable=True)
     note_content = db.Column(db.Text, nullable=True)
-    audio_filename = db.Column(db.String(255), nullable=False)
+    filename = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
     status = db.Column(db.String(50), default='pending')  # pending, processing, completed, failed
@@ -32,7 +33,7 @@ class Note(db.Model):
             'user_id': self.user_id,
             'meeting_time': self.meeting_time,
             'note_content': self.note_content,
-            'audio_filename': self.audio_filename,
+            'audio_dir': self.audio_dir,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'status': self.status
@@ -82,7 +83,27 @@ class User(db.Model):
         if not os.path.exists(full_path):
             os.makedirs(full_path)
 
+        upload_path =  os.path.join(full_path, "uploads")
+        if not os.path.exists(upload_path):
+            os.makedirs(upload_path)
+
+        transcription_path = os.path.join(full_path, "transcripts")
+        if not os.path.exists(transcription_path):
+            os.makedirs(transcription_path)
+
+        md_path = os.path.join(full_path, "notes")
+        if not os.path.exists(md_path):
+            os.makedirs(md_path)
+
+
         self.private_directory = full_path
 
+    def delete_user_directory(self):
+        """Delete user's private directory"""
+        try:
+            os.rmdir(self.private_directory)
+        except OSError:
+            print("Directory not empty! Using force delete instead...")
+            shutil.rmtree(self.private_directory)  # removes directory and all contents
 
 

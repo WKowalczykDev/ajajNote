@@ -3,14 +3,14 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from init import db
 from models import Note, User
 from routes.user import admin_required
 from textTransform.transform import transform
 
-notes_bp = Blueprint('notes', __name__, url_prefix='/api/notes')
+notes_bp = Blueprint('notes', __name__, url_prefix='/notes')
 ALLOWED_EXTENSIONS = {'mp3', 'wav'}
 
 
@@ -19,9 +19,11 @@ def is_allowed_file(filename):
 
 
 @notes_bp.route('/send', methods=['POST'])
+@jwt_required()
 def send_audio():
     """Endpoint to receive audio files"""
-    print(request.files)
+    identity = get_jwt_identity()
+    user = User.query.filter_by(email=identity).first()
     try:
         # Check if audio file is present
         if 'audio' not in request.files:
@@ -40,8 +42,7 @@ def send_audio():
         unique_filename = f"{uuid.uuid4()}.{file_extension}"
 
         # Save file
-        upload_path = Path(current_app.config['UPLOAD_FOLDER'])
-        file_path = upload_path / unique_filename
+        file_path = user.private_directory / Path("uploads") /  unique_filename
         audio_file.save(str(file_path))
 
         # Get title from form data or use default
@@ -50,14 +51,13 @@ def send_audio():
         # Create database entry
         note = Note(
             title=title,
-            audio_filename=unique_filename,
+            user_id=user.id,
+            filename=unique_filename,
             status='pending'
         )
 
         db.session.add(note)
         db.session.commit()
-
-        transform(unique_filename.split('.')[0])
 
         return jsonify({
             'message': 'Audio file uploaded successfully',
@@ -70,12 +70,40 @@ def send_audio():
         return jsonify({'error': str(e)}), 500
 
 
+@notes_bp.route('/process/<int:note_id>', methods=['POST'])
+@jwt_required()
+def process_audio(note_id):
+    user_email = get_jwt_identity()
+    user = User.query.filter_by(email=user_email).first()
+
+    note = Note.query.filter_by(id=note_id).first()
+
+    if not user:
+        return jsonify({'error': 'No user found'}), 404
+
+    if not note:
+        return jsonify({'error': 'No note found'}), 404
+
+    if not user.is_admin and note.user_id != user.id:
+        return jsonify({'error': 'You are not authorized to process this note'}), 403
+
+    directories = get_user_directories(user)
+    msg, status = transform(input = directories['uploads'],
+              transcript_dir=directories['transcripts'],
+              note=directories['md'],
+              filename = note.filename)
+
+    return jsonify({'message': msg}), status
+
+
+
+
 def get_user_directories(user):
     """Get or create user's subdirectories"""
     base_dir = user.private_directory
 
     transcripts_dir = os.path.join(base_dir, 'transcripts')
-    md_dir = os.path.join(base_dir, 'md')
+    md_dir = os.path.join(base_dir, 'notes')
     uploads_dir = os.path.join(base_dir, 'uploads')
 
     for directory in [transcripts_dir, md_dir, uploads_dir]:
@@ -133,13 +161,12 @@ def delete_note_files(note):
 
     # Note: We do NOT delete the audio file (mp3) from uploads directory
 
-# READ - Get all notes for current user
 @notes_bp.route('', methods=['GET'])
 @jwt_required()
 def get_notes():
     """Get all notes for the current user"""
-    current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
+    current_user_email = get_jwt_identity()
+    user = User.query.filter_by(email=current_user_email).first()
 
     if not user:
         return jsonify({'error': 'User not found'}), 404
@@ -148,7 +175,7 @@ def get_notes():
     status = request.args.get('status')
 
     # Build query
-    query = Note.query.filter_by(user_id=current_user_id)
+    query = Note.query.filter_by(user_id=current_user_email)
 
     if status:
         query = query.filter_by(status=status)
@@ -166,8 +193,8 @@ def get_notes():
 @jwt_required()
 def get_note(note_id):
     """Get a specific note with full content from files"""
-    current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
+    email = get_jwt_identity()
+    user = User.query.filter_by(email=email)
 
     if not user:
         return jsonify({'error': 'User not found'}), 404
@@ -178,7 +205,7 @@ def get_note(note_id):
         return jsonify({'error': 'Note not found'}), 404
 
     # Check if user owns the note or is admin
-    if note.user_id != current_user_id and not user.is_admin:
+    if note.user_id != user.id and not user.is_admin:
         return jsonify({'error': 'Access denied'}), 403
 
     # Read content from files
@@ -287,7 +314,7 @@ def delete_note(note_id):
 
 
 # ADMIN - Delete any note
-@notes_bp.route('/admin/<int:note_id>', methods=['DELETE'])
+@notes_bp.route('/<int:note_id>', methods=['DELETE'])
 @admin_required()
 def admin_delete_note(note_id):
     """Admin endpoint to delete any note"""
@@ -312,7 +339,7 @@ def admin_delete_note(note_id):
 
 
 # ADMIN - Get all notes (all users)
-@notes_bp.route('/admin/all', methods=['GET'])
+@notes_bp.route('/all', methods=['GET'])
 @admin_required()
 def admin_get_all_notes():
     """Admin endpoint to get all notes from all users"""
