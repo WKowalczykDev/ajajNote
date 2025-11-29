@@ -1,6 +1,9 @@
 import os
 import secrets
 from datetime import datetime
+
+from flask import current_app
+
 from init import db
 
 
@@ -43,14 +46,15 @@ class User(db.Model):
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
-    private_directory = db.Column(db.String(255), unique=True, nullable=False)
-    notes = db.relationship('Note', backref='user', lazy='dynamic')
-    is_admin = db.Column(db.Boolean, default=False, nullable=False)
+    private_directory = db.Column(db.String(255), unique=True, nullable=True)
+    is_admin = db.Column(db.Boolean, default=False, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
     last_login = db.Column(db.DateTime)
+    notes = db.relationship('Note', backref='user', lazy='dynamic')
 
     def __repr__(self):
         return f'<User {self.email}>'
+
 
     def to_dict(self, include_sensitive=False):
         """Convert user to dictionary"""
@@ -60,30 +64,25 @@ class User(db.Model):
             'email': self.email,
             'is_admin': self.is_admin,
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'last_login': self.last_login.isoformat() if self.last_login else None
+            'last_login': self.last_login.isoformat() if self.last_login else None,
+            'private_directory': self.private_directory
         }
         if include_sensitive:
             data['private_directory'] = self.private_directory
         return data
 
+    def create_user_directory(self):
+        """Create user's private directory"""
+        base_path = current_app.config['UPLOAD_FOLDER']
+        full_path = os.path.join(base_path, str(self.id))
+
+        if not os.path.exists(base_path):
+            os.makedirs(base_path)
+
+        if not os.path.exists(full_path):
+            os.makedirs(full_path)
+
+        self.private_directory = full_path
 
 
-def create_user_directory(directory_name):
-    """Create user's private directory"""
-    base_path = 'user_files'
-    full_path = os.path.join(base_path, directory_name)
 
-    if not os.path.exists(base_path):
-        os.makedirs(base_path)
-
-    if not os.path.exists(full_path):
-        os.makedirs(full_path)
-
-    return full_path
-
-def generate_unique_directory_name(email):
-    """Generate unique directory name for user"""
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    random_string = secrets.token_hex(4)
-    safe_email = email.split('@')[0].replace('.', '_')
-    return f"{safe_email}_{timestamp}_{random_string}"

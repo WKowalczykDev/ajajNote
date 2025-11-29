@@ -1,18 +1,16 @@
 from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import (
-    JWTManager, create_access_token, create_refresh_token,
-    jwt_required, get_jwt_identity, get_jwt, set_access_cookies, unset_jwt_cookies
+    create_access_token, create_refresh_token,
+    jwt_required, get_jwt_identity, get_jwt, set_access_cookies, unset_jwt_cookies, get_csrf_token
 )
 from functools import wraps
 import datetime
 import os
-import secrets
-from models import User, db, generate_unique_directory_name, create_user_directory
+from models import User
+from init import db
 
-auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
-
-jwt = JWTManager()
+auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 # Decorators
 def admin_required():
@@ -22,8 +20,9 @@ def admin_required():
         @wraps(fn)
         @jwt_required()
         def decorator(*args, **kwargs):
-            claims = get_jwt()
-            if not claims.get('is_admin', False):
+            email = get_jwt_identity()
+            is_admin = User.query.filter_by(email=email).first().is_admin
+            if not is_admin:
                 return jsonify({'error': 'Admin privileges required'}), 403
             return fn(*args, **kwargs)
 
@@ -53,26 +52,26 @@ def signup():
 
     # Create new user
     password_hash = generate_password_hash(password)
-    directory_name = generate_unique_directory_name(email)
 
     new_user = User(
         name=name,
         email=email,
         password_hash=password_hash,
-        private_directory=directory_name,
         is_admin=False
     )
 
+
     try:
         db.session.add(new_user)
+        db.session.flush()
+        new_user.create_user_directory()
         db.session.commit()
 
-        # Create user directory
-        create_user_directory(directory_name)
+        # Create user director
 
         # Generate tokens
-        access_token = create_access_token(identity=new_user.id)
-        refresh_token = create_refresh_token(identity=new_user.id)
+        access_token = create_access_token(identity=new_user.email)
+        refresh_token = create_refresh_token(identity=new_user.email)
 
         resp = jsonify({
             'message': 'User created successfully',
@@ -111,15 +110,15 @@ def signin():
     db.session.commit()
 
     # Generate tokens
-    access_token = create_access_token(identity=user.id)
-    refresh_token = create_refresh_token(identity=user.id)
+    access_token = create_access_token(identity=user.email)
+    refresh_token = create_refresh_token(identity=user.email)
 
-    resp = jsonify(jsonify({
+    resp = jsonify({
         'message': 'Sign in successful',
         'access_token': access_token,
         'refresh_token': refresh_token,
         'user': user.to_dict(include_sensitive=True)
-    }))
+    })
     set_access_cookies(resp, access_token)
 
     return resp , 200
@@ -137,7 +136,7 @@ def logout():
 def get_current_user():
     """Get current user information"""
     current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
+    user = User.query.filter_by(email=current_user_id).first()
 
     if not user:
         return jsonify({'error': 'User not found'}), 404
@@ -150,7 +149,7 @@ def get_current_user():
 def update_current_user():
     """Update current user information"""
     current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
+    user = User.query.filter_by(email=current_user_id).first()
 
     if not user:
         return jsonify({'error': 'User not found'}), 404
@@ -266,31 +265,3 @@ def delete_user(user_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': f'Failed to delete user: {str(e)}'}), 500
-
-
-# Initialize function to create admin user
-def init_admin_user(app):
-    """Create initial admin user if none exists"""
-    with app.app_context():
-        admin = User.query.filter_by(is_admin=True).first()
-
-        if not admin:
-            admin_password = os.getenv('ADMIN_PASSWORD', 'admin123')  # Change this!
-            password_hash = generate_password_hash(admin_password)
-            directory_name = generate_unique_directory_name('admin@system.com')
-
-            admin = User(
-                name='Administrator',
-                email='admin@system.com',
-                password_hash=password_hash,
-                private_directory=directory_name,
-                is_admin=True
-            )
-
-            db.session.add(admin)
-            db.session.commit()
-
-            create_user_directory(directory_name)
-
-            print(f"Admin user created - Email: admin@system.com, Password: {admin_password}")
-            print("Please change the admin password immediately!")

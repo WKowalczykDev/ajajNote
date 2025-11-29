@@ -1,11 +1,74 @@
 import os
-from flask import Blueprint, request, jsonify
+import uuid
+from datetime import datetime
+from pathlib import Path
+
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from init import db
 from models import Note, User
 from routes.user import admin_required
+from textTransform.transform import transform
 
 notes_bp = Blueprint('notes', __name__, url_prefix='/api/notes')
+ALLOWED_EXTENSIONS = {'mp3', 'wav'}
+
+
+def is_allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+@notes_bp.route('/send', methods=['POST'])
+def send_audio():
+    """Endpoint to receive audio files"""
+    print(request.files)
+    try:
+        # Check if audio file is present
+        if 'audio' not in request.files:
+            return jsonify({'error': 'No audio file provided'}), 400
+
+        audio_file = request.files['audio']
+
+        if audio_file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        print(audio_file.filename)
+        if not is_allowed_file(audio_file.filename):
+            return jsonify({'error': 'Invalid file type. Allowed: mp3, wav, ogg, m4a, flac'}), 400
+
+        # Generate unique filename
+        file_extension = audio_file.filename.rsplit('.', 1)[1].lower()
+        unique_filename = f"{uuid.uuid4()}.{file_extension}"
+
+        # Save file
+        upload_path = Path(current_app.config['UPLOAD_FOLDER'])
+        file_path = upload_path / unique_filename
+        audio_file.save(str(file_path))
+
+        # Get title from form data or use default
+        title = request.form.get('title', f'Recording {datetime.now().strftime("%Y-%m-%d %H:%M")}')
+
+        # Create database entry
+        note = Note(
+            title=title,
+            audio_filename=unique_filename,
+            status='pending'
+        )
+
+        db.session.add(note)
+        db.session.commit()
+
+        transform(unique_filename.split('.')[0])
+
+        return jsonify({
+            'message': 'Audio file uploaded successfully',
+            'note_id': note.id,
+            'filename': unique_filename
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 
 def get_user_directories(user):
     """Get or create user's subdirectories"""
