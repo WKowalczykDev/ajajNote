@@ -6,7 +6,6 @@ from flask_jwt_extended import (
 )
 from functools import wraps
 import datetime
-import os
 from models import User
 from init import db
 
@@ -246,15 +245,15 @@ def update_user(user_id):
 @admin_required()
 def delete_user(user_id):
     """Delete user by ID (Admin only)"""
-    current_user_id = get_jwt_identity()
     user = User.query.get(user_id)
 
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
     # Prevent admin from deleting themselves
-    if user.id == current_user_id:
+    if user.is_admin == True:
         return jsonify({'error': 'Cannot delete your own account'}), 400
+
 
     try:
         db.session.delete(user)

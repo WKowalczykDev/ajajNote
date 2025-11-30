@@ -22,25 +22,20 @@ Content-Type: audio/mpeg
 
 
 ### Process
-POST http://localhost:5000/notes/process/1
+POST http://localhost:5000/notes/process/3
 
 
 ### DELETE a note (user)
-DELETE http://localhost:5000/notes/1
+DELETE http://localhost:5000/notes/3
 
 ### ADMIN NOTES ENDPOINTS ###
-
-# DELETE any note as admin
-DELETE http://localhost:5000/api/notes/admin/1
-
-# GET all notes as admin
-GET http://localhost:5000/api/notes/admin/all
-Authorization: Bearer {{ADMIN_JWT}}
-
-### Filter admin GET by status
-GET http://localhost:5000/api/notes/admin/all?status=pending
-Authorization: Bearer {{ADMIN_JWT}}
-
-### Filter admin GET by user_id
-GET http://localhost:5000/api/notes/admin/all?user_id=2
-Authorization: Bearer {{ADMIN_JWT}}
+#
+## GET all notes as admin
+#GET http://localhost:5000/api/notes/admin/all
+#
+#### Filter admin GET by status
+#GET http://localhost:5000/api/notes/admin/all?status=pending
+#
+#### Get Note Content
+#### Filter admin GET by user_id
+#GET http://localhost:5000/api/notes/admin/all?user_id=2

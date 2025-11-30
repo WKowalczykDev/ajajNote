@@ -5,6 +5,8 @@ from pathlib import Path
 
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from sqlalchemy.exc import IntegrityError
+
 from init import db
 from models import Note, User
 from routes.user import admin_required
@@ -55,9 +57,11 @@ def send_audio():
             filename=unique_filename,
             status='pending'
         )
-
-        db.session.add(note)
-        db.session.commit()
+        try:
+            db.session.add(note)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
 
         return jsonify({
             'message': 'Audio file uploaded successfully',
@@ -87,6 +91,9 @@ def process_audio(note_id):
     if not user.is_admin and note.user_id != user.id:
         return jsonify({'error': 'You are not authorized to process this note'}), 403
 
+    if note.status == 'processed':
+        return jsonify({'error': 'Note already processed'}), 400
+
     directories = get_user_directories(user)
     msg, status = transform(input = directories['uploads'],
               transcript_dir=directories['transcripts'],
@@ -95,11 +102,16 @@ def process_audio(note_id):
 
     if status == 200:
         note.status = 'processed'
-        db.session.commit()
+        transcript, note_content = read_note_files(note)
+
+        try:
+            note.transcription = transcript
+            note.note_content = note_content
+            db.session.commit()
+        except IntegrityError as e:
+            db.session.rollback()
 
     return jsonify({'message': msg}), status
-
-
 
 
 def get_user_directories(user):
@@ -130,14 +142,15 @@ def read_note_files(note, user_dirs=None):
     note_content = None
 
     # Read transcription
-    transcript_filename = f"note_{note.id}_transcript.txt"
+    file = note.filename.split('.')[0]
+    transcript_filename = f"{file}.txt"
     transcript_path = os.path.join(user_dirs['transcripts'], transcript_filename)
     if os.path.exists(transcript_path):
         with open(transcript_path, 'r', encoding='utf-8') as f:
             transcription = f.read()
 
     # Read note content
-    md_filename = f"note_{note.id}_content.md"
+    md_filename = f"{file}.md"
     md_path = os.path.join(user_dirs['md'], md_filename)
     if os.path.exists(md_path):
         with open(md_path, 'r', encoding='utf-8') as f:
@@ -145,25 +158,39 @@ def read_note_files(note, user_dirs=None):
 
     return transcription, note_content
 
+@notes_bp.route('/<int:note_id>', methods=['DELETE'])
+@jwt_required()
+def delete_note(note_id):
+    note = Note.query.filter_by(id=note_id).first()
+    identity = get_jwt_identity()
+    user = User.query.filter_by(email=identity).first()
+    note_owner = User.query.get(note.user_id)
+    user_dirs = get_user_directories(user)
 
-# def delete_note_files(note):
-#     """Delete note files from disk"""
-#     user = User.query.get(note.user_id)
-#     user_dirs = get_user_directories(user)
-#
-#     # Delete transcription file
-#     transcript_filename = f"note_{note.id}_transcript.txt"
-#     transcript_path = os.path.join(user_dirs['transcripts'], transcript_filename)
-#     if os.path.exists(transcript_path):
-#         os.remove(transcript_path)
-#
-#     # Delete note content file
-#     md_filename = f"note_{note.id}_content.md"
-#     md_path = os.path.join(user_dirs['md'], md_filename)
-#     if os.path.exists(md_path):
-#         os.remove(md_path)
+    if user.id != note_owner.id and  not user.is_admin:
+        return jsonify({'error': 'You are not authorized to delete this note'}), 401
 
-    # Note: We do NOT delete the audio file (mp3) from uploads directory
+    # Delete transcription file
+    file = note.filename.rstrip('.mp3')
+    transcript_path = Path(user_dirs['transcripts'], f"{file}.txt")
+    if os.path.exists(transcript_path):
+        os.remove(transcript_path)
+
+    audio_path = Path(user_dirs['uploads'], f"{file}.mp3")
+    if os.path.exists(audio_path):
+        os.remove(audio_path)
+
+    # Delete note content file
+    md_path = Path(user_dirs['md'], f"{file}.md")
+    if os.path.exists(md_path):
+        os.remove(md_path)
+    try:
+        db.session.delete(note)
+        db.session.commit()
+    except IntegrityError as e:
+        db.session.rollback()
+
+    return jsonify({'status': 'success'}), 200
 
 @notes_bp.route('', methods=['GET'])
 @jwt_required()
@@ -191,14 +218,12 @@ def get_notes():
         'count': len(notes)
     }), 200
 
-
-# READ - Get a specific note by ID
-@notes_bp.route('/<int:note_id>', methods=['GET'])
+@notes_bp.route('get/<int:note_id>', methods=['POST'])
 @jwt_required()
 def get_note(note_id):
     """Get a specific note with full content from files"""
     email = get_jwt_identity()
-    user = User.query.filter_by(email=email)
+    user = User.query.filter_by(email=email).first()
 
     if not user:
         return jsonify({'error': 'User not found'}), 404
@@ -212,16 +237,7 @@ def get_note(note_id):
     if note.user_id != user.id and not user.is_admin:
         return jsonify({'error': 'Access denied'}), 403
 
-    # Read content from files
-    user_dirs = get_user_directories(User.query.get(note.user_id))
-    transcription, note_content = read_note_files(note, user_dirs)
-
-    # Build response
-    note_dict = note.to_dict()
-    note_dict['transcription'] = transcription
-    note_dict['note_content'] = note_content
-
-    return jsonify({'note': note_dict}), 200
+    return jsonify({'note': note.to_dict()}), 200
 
 
 # # UPDATE - Update a note
@@ -280,66 +296,6 @@ def get_note(note_id):
 #     except Exception as e:
 #         db.session.rollback()
 #         return jsonify({'error': f'Failed to update note: {str(e)}'}), 500
-
-
-# # DELETE - Delete own note (user)
-# @notes_bp.route('/<int:note_id>', methods=['DELETE'])
-# @jwt_required()
-# def delete_note(note_id):
-#     """Delete a note (user can only delete their own)"""
-#     current_user_id = get_jwt_identity()
-#     user = User.query.get(current_user_id)
-#
-#     if not user:
-#         return jsonify({'error': 'User not found'}), 404
-#
-#     note = Note.query.get(note_id)
-#
-#     if not note:
-#         return jsonify({'error': 'Note not found'}), 404
-#
-#     # Check if user owns the note
-#     if note.user_id != current_user_id:
-#         return jsonify({'error': 'Access denied'}), 403
-#
-#     try:
-#         # Delete files from disk
-#         delete_note_files(note)
-#
-#         # Delete from database
-#         db.session.delete(note)
-#         db.session.commit()
-#
-#         return jsonify({'message': 'Note deleted successfully'}), 200
-#
-#     except Exception as e:
-#         db.session.rollback()
-#         return jsonify({'error': f'Failed to delete note: {str(e)}'}), 500
-#
-#
-# # ADMIN - Delete any note
-# @notes_bp.route('/<int:note_id>', methods=['DELETE'])
-# @admin_required()
-# def admin_delete_note(note_id):
-#     """Admin endpoint to delete any note"""
-#     note = Note.query.get(note_id)
-#
-#     if not note:
-#         return jsonify({'error': 'Note not found'}), 404
-#
-#     try:
-#         # Delete files from disk
-#         delete_note_files(note)
-#
-#         # Delete from database
-#         db.session.delete(note)
-#         db.session.commit()
-#
-#         return jsonify({'message': 'Note deleted successfully by admin'}), 200
-#
-#     except Exception as e:
-#         db.session.rollback()
-#         return jsonify({'error': f'Failed to delete note: {str(e)}'}), 500
 
 
 # ADMIN - Get all notes (all users)

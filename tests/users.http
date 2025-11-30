@@ -4,8 +4,8 @@ POST http://localhost:5000/auth/signup
 Content-Type: application/json
 
 {
-  "name": "Test",
-  "email": "test@example.com",
+  "name": "Test2",
+  "email": "test2@example.com",
   "password": "password123"
 }
 
@@ -15,7 +15,7 @@ POST http://localhost:5000/auth/login
 Content-Type: application/json
 
 {
-  "email": "test@example.com",
+  "email": "test2@example.com",
   "password": "password123"
 }
 
@@ -61,11 +61,10 @@ PUT http://localhost:5000/auth/users/1
 Content-Type: application/json
 
 {
-  "name": "Admin Renamed User",
-  "is_admin": false
+  "name": "AdminRenamed"
 }
 
 ###  ADMIN DELETE USER
 
-DELETE http://localhost:5000/auth/users/3
+DELETE http://localhost:5000/auth/users/1
 
