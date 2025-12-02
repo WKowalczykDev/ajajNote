@@ -15,7 +15,7 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 # ==================== ŚCIEŻKI KATALOGÓW ====================
 # Katalog główny projektu
 BASE_DIR = Path(__file__).parent
-
+FILE_NAME = "spotkanie_wrss_01_12"
 # Katalogi INPUT
 INPUT_DIR = BASE_DIR / "INPUT"
 AUDIO_FILES_DIR = INPUT_DIR / "audio_files"
@@ -24,23 +24,27 @@ AUDIO_FILES_DIR = INPUT_DIR / "audio_files"
 OUTPUT_DIR = BASE_DIR / "OUTPUT"
 TRANSCRIPTS_DIR = OUTPUT_DIR / "transcripts"
 ANALYSIS_DIR = OUTPUT_DIR / "md"
+PDF_DIR = OUTPUT_DIR / "pdf"
 
 # Katalog z promptami
 PROMPTS_DIR = BASE_DIR / "assets" / "prompts"
 
 # ==================== PLIKI WEJŚCIOWE ====================
 # Główny plik audio do przetworzenia
-INPUT_AUDIO_FILE = "zamarzanie_wody.mp3"
+INPUT_AUDIO_FILE = f"{FILE_NAME}.mp3"
 INPUT_AUDIO_PATH = AUDIO_FILES_DIR / INPUT_AUDIO_FILE
 
 # ==================== PLIKI WYJŚCIOWE ====================
 # Nazwa pliku z transkrypcją
-OUTPUT_TRANSCRIPT_FILE = "test_main_config.txt"
+OUTPUT_TRANSCRIPT_FILE = f"{FILE_NAME}.txt"
 OUTPUT_TRANSCRIPT_PATH = TRANSCRIPTS_DIR / OUTPUT_TRANSCRIPT_FILE
 
 # Nazwa pliku z analizą
-OUTPUT_ANALYSIS_FILE = "test_main_config.md"
+OUTPUT_ANALYSIS_FILE = f"{FILE_NAME}.md"
 OUTPUT_ANALYSIS_PATH = ANALYSIS_DIR / OUTPUT_ANALYSIS_FILE
+
+OUTPUT_PDF_FILE = f"{FILE_NAME}.pdf"
+OUTPUT_PDF_PATH = PDF_DIR / OUTPUT_PDF_FILE
 
 # ==================== KONFIGURACJA MODELI ====================
 # Model Gemini do analizy
@@ -76,6 +80,7 @@ def ensure_directories():
         OUTPUT_DIR,
         TRANSCRIPTS_DIR,
         ANALYSIS_DIR,
+        PDF_DIR,
     ]
 
     for directory in directories:
@@ -117,6 +122,7 @@ def print_config_summary():
     print(f"🎤 Plik audio: {INPUT_AUDIO_FILE}")
     print(f"📝 Transkrypcja: {OUTPUT_TRANSCRIPT_FILE}")
     print(f"📊 Analiza: {OUTPUT_ANALYSIS_FILE}")
+    print(f"PDF: {OUTPUT_PDF_FILE}")
     print(f"🤖 Model Gemini: {GEMINI_MODEL}")
     print(f"💬 Typ promptu: {ACTIVE_PROMPT_TYPE}")
     print(f"🔊 Diaryzacja: {'TAK' if ASSEMBLYAI_SPEAKER_LABELS else 'NIE'}")

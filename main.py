@@ -1,33 +1,38 @@
 from audio_transcriber_assemblyai import AudioTranscriber
 from summary_gemini import TranscriptionAnalyzer
 import config
+from utils import convert_markdown_file_to_pdf
+
 
 def main():
     # INICJALIZACJA
-    print("🔧 Inicjalizacja...\n")
-    config.ensure_directories()
+    # print("🔧 Inicjalizacja...\n")
+    # config.ensure_directories()
+    #
+    # if not config.validate_config():
+    #     print("\n❌ Konfiguracja zawiera błędy. Popraw je i spróbuj ponownie.")
+    #     return
+    #
+    # config.print_config_summary()
+    #
+    # # TRANSKRYPCJA
+    # print("📝 ETAP 1: TRANSKRYPCJA")
+    # transcriber = AudioTranscriber(
+    #     api_key=config.ASSEMBLYAI_API_KEY,
+    #     language=config.ASSEMBLYAI_LANGUAGE,
+    #     speaker_labels=config.ASSEMBLYAI_SPEAKER_LABELS
+    # )
+    # transcript_out  = ''
+    # try:
+    #     transcript = transcriber.transcribe(str(config.INPUT_AUDIO_PATH))
+    #     transcript_out = transcriber.save(transcript, str(config.OUTPUT_TRANSCRIPT_PATH))
+    #     print(f"✅ Transkrypcja zakończona w {transcriber.time:.2f}s\n")
+    # except Exception as e:
+    #     print(f"❌ Błąd podczas transkrypcji: {e}")
+    #     return
 
-    if not config.validate_config():
-        print("\n❌ Konfiguracja zawiera błędy. Popraw je i spróbuj ponownie.")
-        return
-
-    config.print_config_summary()
-
-    # TRANSKRYPCJA
-    print("📝 ETAP 1: TRANSKRYPCJA")
-    transcriber = AudioTranscriber(
-        api_key=config.ASSEMBLYAI_API_KEY,
-        language=config.ASSEMBLYAI_LANGUAGE,
-        speaker_labels=config.ASSEMBLYAI_SPEAKER_LABELS
-    )
-    transcript_out  = ''
-    try:
-        transcript = transcriber.transcribe(str(config.INPUT_AUDIO_PATH))
-        transcript_out = transcriber.save(transcript, str(config.OUTPUT_TRANSCRIPT_PATH))
-        print(f"✅ Transkrypcja zakończona w {transcriber.time:.2f}s\n")
-    except Exception as e:
-        print(f"❌ Błąd podczas transkrypcji: {e}")
-        return
+    file = open("./OUTPUT/transcripts/spotkanie_wrss_01_12.txt", "r")
+    transcript_out = file.read()
 
     # ANALIZA
     print("📊 ETAP 2: ANALIZA AI")
@@ -55,6 +60,10 @@ def main():
     # PODSUMOWANIE
     print(f"📝 Transkrypcja: {config.OUTPUT_TRANSCRIPT_PATH}")
     print(f"📊 Analiza: {config.OUTPUT_ANALYSIS_PATH}")
+
+    # Wypisanie do PDF
+    print("ETAP 3: konwert do pdf")
+    convert_markdown_file_to_pdf(config.OUTPUT_ANALYSIS_PATH,config.OUTPUT_PDF_PATH)
 
 
 if __name__ == "__main__":
