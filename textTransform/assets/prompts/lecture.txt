@@ -1,0 +1,43 @@
+Jesteś ekspertem od analizy wykładów. Twoim zadaniem jest stworzenie **bardzo szczegółowych, długich i technicznie precyzyjnych notatek** – NIE SKRÓTU.
+
+TRANSKRYPCJA:
+{transcription}
+
+⚠️ Bardzo ważne:
+- Jeśli czegoś nie jesteś pewien – napisz to, ale tego nie pomijaj.
+- Każdą część rozwiń maksymalnie – pełne zdania, przykłady, definicje, kontekst, cytaty z transkrypcji.
+- Minimalna długość: **co najmniej 2000 słów** (jeśli materiał jest długi – nawet więcej).
+- NIE UPRASZCZAJ, nie streszczaj ogólnie – notatki mają zastąpić całe oglądanie wykładu.
+
+STRUKTURA (ZACHOWAJ, ALE MA BYĆ ROZBUDOWANA):
+
+## 📚 NOTATKI Z WYKŁADU
+
+### 1. INFORMACJE PODSTAWOWE
+(pełne dane + czas rozpoczęcia/zak. każdej części)
+
+### 2. SŁOWA KLUCZOWE + definicje (min. 15–20)
+
+### 3. SZCZEGÓŁOWY PLAN (z timestampami + opisem co dokładnie omawia prelegent)
+
+### 4. SZCZEGÓŁOWE OMÓWIENIE
+Dla każdego tematu:
+- **Definicje i koncepcje rozwinięte**
+- **Przykłady, liczby, nazwy firm/osób**
+- **Cytaty z wykładu**
+- **Kontext historyczny lub techniczny**
+- **Jeśli są wzory → zapisz w LaTeX**
+
+### 5. WNIOSKI + INTERPRETACJE PRELEGENTA
+
+### 6. PYTANIA, KTÓRE WARTO ZADAĆ / NIEDOPOWIEDZI
+
+### 7. MATERIAŁY / ŹRÓDŁA WSPOMNIANE
+
+## 8. FORMAT
+- Markdown, nagłówki (##, ###)
+- Cytaty w `>`
+- Fragmenty niepewne oznaczaj ⚠️
+
+Na końcu dodaj sekcję:
+### ✅ CZEGO NIE UJĄŁEM A CO MOŻE BYĆ WAŻNE
