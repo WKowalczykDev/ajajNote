@@ -5,7 +5,7 @@ from textTransform.summary_gemini import TranscriptionAnalyzer
 from textTransform import config
 
 
-def transform(input, transcript_dir, note, filename, keywords=None):
+def transform(input_dir, transcript_dir, note_dir, filename, keywords=None):
     # INICJALIZACJA
     name, extension = os.path.splitext(filename)
     print("🔧 Inicjalizacja...\n")
@@ -25,7 +25,7 @@ def transform(input, transcript_dir, note, filename, keywords=None):
     )
     transcript_out = ''
 
-    file_path = os.path.join(input, name + extension)
+    file_path = os.path.join(input_dir, name + extension)
     print("Transcribing file:", file_path)
 
     if not os.path.exists(file_path):
@@ -54,7 +54,7 @@ def transform(input, transcript_dir, note, filename, keywords=None):
     try:
         analysis = analyzer.analyze(transcript_out)
         if analysis:
-            analyzer.save(analysis, os.path.join(note, name + ".md"))
+            analyzer.save(analysis, os.path.join(note_dir, name + ".md"))
             msg = "Success"
             return msg, 200
         else:
