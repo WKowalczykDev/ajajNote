@@ -3,8 +3,8 @@ from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 
-INPUT_FILE = "../../INPUT/audio_files/spotkanie_wursu_17_11.mp3"
-OUTPUT_FILE = "../OUTPUT/transcripts/tr-wrss-17_11_25.txt"
+INPUT_FILE = "INPUT/audio_files/spotkanie_wursu_17_11.mp3"
+OUTPUT_FILE = "OUTPUT/transcripts/tr-wrss-17_11_25.txt"
 
 load_dotenv()
 

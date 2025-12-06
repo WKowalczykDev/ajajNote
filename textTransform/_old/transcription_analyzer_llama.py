@@ -120,7 +120,7 @@ def main():
 
     filename = input("\nPodaj nazwę pliku (domyślnie: transcripts/transkrypcja_timeline.txt): ").strip()
     if not filename:
-        filename = "../OUTPUT/transcripts/transkrypcja_timeline.txt"
+        filename = "OUTPUT/transcripts/transkrypcja_timeline.txt"
 
     transcription = analyzer.load_transcription(filename)
     output_name = ""

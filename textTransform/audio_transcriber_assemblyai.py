@@ -1,16 +1,20 @@
 import assemblyai as aai
 import time
 
+from assemblyai import WordBoost
 
 
 class AudioTranscriber:
-    def __init__(self, api_key=None, language="pl", speaker_labels=True):
+    def __init__(self, api_key=None, language="pl", speaker_labels=True, keywords=None):
         aai.settings.api_key = api_key
         self.config = aai.TranscriptionConfig(
             speech_model=aai.SpeechModel.best,
             language_code=language,
             speaker_labels=speaker_labels,
+            word_boost=keywords,
+            boost_param=WordBoost.high,
         )
+
         self.time = -1
 
     def transcribe(self, audio_file_path):

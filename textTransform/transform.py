@@ -5,7 +5,7 @@ from textTransform.summary_gemini import TranscriptionAnalyzer
 from textTransform import config
 
 
-def transform(input, transcript_dir, note, filename):
+def transform(input, transcript_dir, note, filename, keywords=None):
     # INICJALIZACJA
     name, extension = os.path.splitext(filename)
     print("🔧 Inicjalizacja...\n")
@@ -20,7 +20,8 @@ def transform(input, transcript_dir, note, filename):
     transcriber = AudioTranscriber(
         api_key=config.ASSEMBLYAI_API_KEY,
         language=config.ASSEMBLYAI_LANGUAGE,
-        speaker_labels=config.ASSEMBLYAI_SPEAKER_LABELS
+        speaker_labels=config.ASSEMBLYAI_SPEAKER_LABELS,
+        keywords = keywords,
     )
     transcript_out = ''
 
