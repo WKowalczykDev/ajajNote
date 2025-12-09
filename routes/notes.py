@@ -13,7 +13,7 @@ from routes.user import admin_required
 from textTransform.transform import transform
 
 notes_bp = Blueprint('notes', __name__, url_prefix='/notes')
-ALLOWED_EXTENSIONS = {'mp3', 'wav'}
+ALLOWED_EXTENSIONS = {'mp3', 'wav', 'webm'}
 
 
 def is_allowed_file(filename):
@@ -95,9 +95,9 @@ def process_audio(note_id):
         return jsonify({'error': 'Note already processed'}), 400
 
     directories = get_user_directories(user)
-    msg, status = transform(input = directories['uploads'],
+    msg, status = transform(input_dir = directories['uploads'],
               transcript_dir=directories['transcripts'],
-              note=directories['md'],
+              note_dir=directories['md'],
               filename = note.filename)
 
     if status == 200:
@@ -240,62 +240,83 @@ def get_note(note_id):
     return jsonify({'note': note.to_dict()}), 200
 
 
-# # UPDATE - Update a note
-# @notes_bp.route('/<int:note_id>', methods=['PUT', 'PATCH'])
-# @jwt_required()
-# def update_note(note_id):
-#     """Update a note"""
-#     current_user_id = get_jwt_identity()
-#     user = User.query.get(current_user_id)
-#
-#     if not user:
-#         return jsonify({'error': 'User not found'}), 404
-#
-#     note = Note.query.get(note_id)
-#
-#     if not note:
-#         return jsonify({'error': 'Note not found'}), 404
-#
-#     # Check if user owns the note
-#     if note.user_id != current_user_id:
-#         return jsonify({'error': 'Access denied'}), 403
-#
-#     data = request.get_json()
-#
-#     try:
-#         # Update database fields
-#         if 'title' in data:
-#             note.title = data['title']
-#
-#         if 'meeting_time' in data:
-#             note.meeting_time = datetime.fromisoformat(data['meeting_time']) if data['meeting_time'] else None
-#
-#         if 'status' in data:
-#             note.status = data['status']
-#
-#         # Get user directories
-#         user_dirs = get_user_directories(user)
-#
-#         # Update files if content is provided
-#         if 'transcription' in data:
-#             save_note_files(note, transcription=data['transcription'], user_dirs=user_dirs)
-#             note.transcription = data['transcription']
-#
-#         if 'note_content' in data:
-#             save_note_files(note, note_content=data['note_content'], user_dirs=user_dirs)
-#             note.note_content = data['note_content']
-#
-#         note.updated_at = datetime.now()
-#         db.session.commit()
-#
-#         return jsonify({
-#             'message': 'Note updated successfully',
-#             'note': note.to_dict()
-#         }), 200
-#
-#     except Exception as e:
-#         db.session.rollback()
-#         return jsonify({'error': f'Failed to update note: {str(e)}'}), 500
+# UPDATE - Update a note
+@notes_bp.route('/<int:note_id>', methods=['PUT'])
+@jwt_required()
+def update_note(note_id):
+    """Update a note"""
+    current_user_email = get_jwt_identity()
+    user = User.query.filter_by(email=current_user_email).first()
+
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    note = Note.query.get(note_id)
+
+    if not note:
+        return jsonify({'error': 'Note not found'}), 404
+
+    # Check if user owns the note
+    if note.user_id != user.id:
+        return jsonify({'error': 'Access denied'}), 403
+
+    data = request.get_json()
+
+    try:
+        # Update database fields
+        if 'title' in data:
+            note.title = data.get('title')
+
+        if 'meeting_time' in data:
+            note.meeting_time = datetime.fromisoformat(data['meeting_time']) if data['meeting_time'] else None
+
+        if 'status' in data:
+            note.status = data['status']
+
+        # Get user directories
+        user_dirs = get_user_directories(user)
+
+        # Update files if content is provided
+        if 'transcription' in data:
+            save_note_files(note, transcription=data['transcription'], user_dirs=user_dirs)
+            note.transcription = data['transcription']
+
+        if 'note_content' in data:
+            save_note_files(note, note_content=data['note_content'], user_dirs=user_dirs)
+            note.note_content = data['note_content']
+
+        note.updated_at = datetime.now()
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Note updated successfully',
+            'note': note.to_dict()
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Failed to update note: {str(e)}'}), 500
+
+def save_note_files(note, transcription=None, note_content=None, user_dirs=None):
+    """Save transcription and/or note content to files for a note"""
+    if user_dirs is None:
+        user = User.query.get(note.user_id)
+        user_dirs = get_user_directories(user)
+
+    file_stem = note.filename.rsplit('.', 1)[0]
+
+    # Save transcription to .txt
+    if transcription is not None:
+        transcript_path = Path(user_dirs['transcripts'], f"{file_stem}.txt")
+        with open(transcript_path, 'w', encoding='utf-8') as f:
+            f.write(transcription)
+
+    # Save note content to .md
+    if note_content is not None:
+        md_path = Path(user_dirs['md'], f"{file_stem}.md")
+        with open(md_path, 'w', encoding='utf-8') as f:
+            f.write(note_content)
+
 
 
 # ADMIN - Get all notes (all users)

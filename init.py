@@ -7,10 +7,12 @@ from werkzeug.security import generate_password_hash
 
 from extensions import jwt, db
 from models import User
+from flask_cors import CORS
 
 
 def create_app():
     app = Flask(__name__)
+    CORS(app, origins=["http://localhost:5173"], supports_credentials=True)
 
     # Configuration
     app.config['SECRET_KEY'] = 'your-secret-key-change-in-production'
@@ -24,6 +26,7 @@ def create_app():
     app.config["JWT_COOKIE_HTTPONLY"] = True  # JS cannot read cookie
     app.config["JWT_COOKIE_CSRF_PROTECT"] = False  # JS cannot read cookie #TODO
     app.config["JWT_COOKIE_SAMESITE"] = "Strict"
+    app.config["SESSION_COOKIE_AGE"] = 24 * 60 * 60
     app.config["ADMIN_LOGIN"] = "admin"
     app.config["ADMIN_PASSWORD"] = "admin123"
 

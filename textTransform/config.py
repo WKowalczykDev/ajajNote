@@ -21,7 +21,7 @@ TRANSCRIPTS_DIR = OUTPUT_DIR / "transcripts"
 ANALYSIS_DIR = OUTPUT_DIR / "md"
 
 # Katalog z promptami
-PROMPTS_DIR = Path("assets/prompts")
+PROMPTS_DIR = Path("textTransform/assets/prompts")
 
 # ==================== KONFIGURACJA MODELI ====================
 # Model Gemini do analizy
