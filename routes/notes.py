@@ -1,9 +1,12 @@
 import os
+import tempfile
 import uuid
 from datetime import datetime
+from markdown_pdf import MarkdownPdf, Section
 from pathlib import Path
 
 from flask import Blueprint, request, jsonify
+from flask import send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.exc import IntegrityError
 
@@ -352,3 +355,77 @@ def admin_get_all_notes():
         'notes': notes_with_users,
         'count': len(notes_with_users)
     }), 200
+
+
+@notes_bp.route('/<int:note_id>/export/pdf', methods=['GET'])
+@jwt_required()
+def export_note_to_pdf(note_id):
+    """Export a note's markdown content to PDF"""
+    email = get_jwt_identity()
+    user = User.query.filter_by(email=email).first()
+
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    note = Note.query.get(note_id)
+
+    if not note:
+        return jsonify({'error': 'Note not found'}), 404
+
+    # Check authorization
+    if note.user_id != user.id and not user.is_admin:
+        return jsonify({'error': 'Access denied'}), 403
+
+    # Get user directories
+    user_dirs = get_user_directories(user)
+    file_stem = note.filename.rsplit('.', 1)[0]
+    md_path = Path(user_dirs['md'], f"{file_stem}.md")
+
+    if not os.path.exists(md_path):
+        return jsonify({'error': 'Note content not found'}), 404
+
+    # Read markdown file
+    with open(md_path, 'r', encoding='utf-8') as f:
+        md_content = f.read()
+
+    # Create temporary PDF file
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+        pdf_path = tmp_file.name
+
+    try:
+        # Create PDF with title header
+        pdf = MarkdownPdf(toc_level=2)
+
+        # Add header with note title and date
+        header = f"# {note.title}\n\n*Created: {note.created_at.strftime('%B %d, %Y at %H:%M')}*\n\n---\n\n"
+        full_content = header + md_content
+
+        # Add content as a single section
+        pdf.add_section(Section(full_content, toc=False))
+
+        # Save to PDF
+        pdf.save(pdf_path)
+
+    except Exception as e:
+        os.unlink(pdf_path)
+        return jsonify({'error': f'Failed to generate PDF: {str(e)}'}), 500
+
+    # Generate safe filename
+    safe_title = "".join(c for c in note.title if c.isalnum() or c in (' ', '-', '_')).strip()
+    safe_title = safe_title[:50]
+    download_filename = f"{safe_title}.pdf"
+
+    # Send file and cleanup
+    try:
+        return send_file(
+            pdf_path,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=download_filename
+        )
+    finally:
+        # Delete temp file after sending
+        try:
+            os.unlink(pdf_path)
+        except:
+            pass
