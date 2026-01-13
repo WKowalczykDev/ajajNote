@@ -1,17 +1,13 @@
-import requests
 import os
+import requests
+import tempfile
 import uuid
 from datetime import datetime
+from markdown_pdf import MarkdownPdf, Section
 from pathlib import Path
 
-from flask import send_file
-from io import BytesIO
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-
 from flask import Blueprint, request, jsonify
+from flask import send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.exc import IntegrityError
 
@@ -19,11 +15,11 @@ from init import db
 from models import Note, User
 from routes.user import admin_required
 
-# Adres mikroserwisu zdefiniowany w docker-compose
+# Adres mikroserwisu w sieci Docker
 TEXT_TRANSFORM_URL = os.getenv('TEXT_TRANSFORM_URL', 'http://text-transform:5001')
 
 notes_bp = Blueprint('notes', __name__, url_prefix='/notes')
-ALLOWED_EXTENSIONS = {'mp3', 'wav'}
+ALLOWED_EXTENSIONS = {'mp3', 'wav', 'webm', 'm4a', 'ogg', 'flac'}
 
 
 def is_allowed_file(filename):
@@ -37,6 +33,7 @@ def send_audio():
     identity = get_jwt_identity()
     user = User.query.filter_by(email=identity).first()
     try:
+        # Check if audio file is present
         if 'audio' not in request.files:
             return jsonify({'error': 'No audio file provided'}), 400
 
@@ -44,7 +41,7 @@ def send_audio():
 
         if audio_file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
-
+        print(audio_file.filename)
         if not is_allowed_file(audio_file.filename):
             return jsonify({'error': 'Invalid file type. Allowed: mp3, wav, ogg, m4a, flac'}), 400
 
@@ -52,11 +49,16 @@ def send_audio():
         file_extension = audio_file.filename.rsplit('.', 1)[1].lower()
         unique_filename = f"{uuid.uuid4()}.{file_extension}"
 
-        # Save file to shared volume
-        file_path = user.private_directory / Path("uploads") / unique_filename
+        # Save file
+        # Używamy Path do łączenia ścieżek
+        file_path = Path(user.private_directory) / "uploads" / unique_filename
+
+        # Upewnij się, że katalog istnieje (choć powinien być utworzony przy rejestracji)
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
         audio_file.save(str(file_path))
 
-        # Get title
+        # Get title from form data or use default
         title = request.form.get('title', f'Recording {datetime.now().strftime("%Y-%m-%d %H:%M")}')
 
         # Create database entry
@@ -106,9 +108,10 @@ def process_audio(note_id):
     if note.status == 'processed':
         return jsonify({'error': 'Note already processed'}), 400
 
-    # Komunikacja z mikroserwisem textTransform
+    # Komunikacja z mikroserwisem textTransform (Docker)
     try:
         # Wysyłamy filename i user_id, mikroserwis sam ogarnie ścieżki na współdzielonym wolumenie
+        # To jest KLUCZOWE - request HTTP zamiast lokalnego importu
         response = requests.post(f"{TEXT_TRANSFORM_URL}/process", json={
             "filename": note.filename,
             "user_id": user.id
@@ -142,6 +145,7 @@ def process_audio(note_id):
         return jsonify({'message': msg}), 200
 
     except requests.exceptions.RequestException as e:
+        # Ten błąd wystąpi, jeśli kontener text-transform jest wyłączony lub nieosiągalny
         return jsonify({'error': f'Communication with processing service failed: {str(e)}'}), 503
 
 
@@ -174,7 +178,7 @@ def read_note_files(note, user_dirs=None):
     note_content = None
 
     # Read transcription
-    file = note.filename.split('.')[0]
+    file = note.filename.rsplit('.', 1)[0]
     transcript_filename = f"{file}.txt"
     transcript_path = os.path.join(user_dirs['transcripts'], transcript_filename)
     if os.path.exists(transcript_path):
@@ -202,7 +206,7 @@ def delete_note(note_id):
         return jsonify({'error': 'Note not found'}), 404
 
     note_owner = User.query.get(note.user_id)
-    user_dirs = get_user_directories(user if user.is_admin else note_owner)
+    user_dirs = get_user_directories(user)
 
     if user.id != note_owner.id and not user.is_admin:
         return jsonify({'error': 'You are not authorized to delete this note'}), 401
@@ -213,6 +217,8 @@ def delete_note(note_id):
     if os.path.exists(transcript_path):
         os.remove(transcript_path)
 
+    # Delete audio file (musimy znać rozszerzenie z bazy lub pliku)
+    # Najbezpieczniej usunąć plik, który jest w note.filename
     audio_path = Path(user_dirs['uploads'], note.filename)
     if os.path.exists(audio_path):
         os.remove(audio_path)
@@ -224,7 +230,7 @@ def delete_note(note_id):
     try:
         db.session.delete(note)
         db.session.commit()
-    except IntegrityError:
+    except IntegrityError as e:
         db.session.rollback()
 
     return jsonify({'status': 'success'}), 200
@@ -279,6 +285,86 @@ def get_note(note_id):
     return jsonify({'note': note.to_dict()}), 200
 
 
+# UPDATE - Update a note
+@notes_bp.route('/<int:note_id>', methods=['PUT'])
+@jwt_required()
+def update_note(note_id):
+    """Update a note"""
+    current_user_email = get_jwt_identity()
+    user = User.query.filter_by(email=current_user_email).first()
+
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    note = Note.query.get(note_id)
+
+    if not note:
+        return jsonify({'error': 'Note not found'}), 404
+
+    # Check if user owns the note
+    if note.user_id != user.id:
+        return jsonify({'error': 'Access denied'}), 403
+
+    data = request.get_json()
+
+    try:
+        # Update database fields
+        if 'title' in data:
+            note.title = data.get('title')
+
+        if 'meeting_time' in data:
+            note.meeting_time = datetime.fromisoformat(data['meeting_time']) if data['meeting_time'] else None
+
+        if 'status' in data:
+            note.status = data['status']
+
+        # Get user directories
+        user_dirs = get_user_directories(user)
+
+        # Update files if content is provided
+        if 'transcription' in data:
+            save_note_files(note, transcription=data['transcription'], user_dirs=user_dirs)
+            note.transcription = data['transcription']
+
+        if 'note_content' in data:
+            save_note_files(note, note_content=data['note_content'], user_dirs=user_dirs)
+            note.note_content = data['note_content']
+
+        note.updated_at = datetime.now()
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Note updated successfully',
+            'note': note.to_dict()
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Failed to update note: {str(e)}'}), 500
+
+
+def save_note_files(note, transcription=None, note_content=None, user_dirs=None):
+    """Save transcription and/or note content to files for a note"""
+    if user_dirs is None:
+        user = User.query.get(note.user_id)
+        user_dirs = get_user_directories(user)
+
+    file_stem = note.filename.rsplit('.', 1)[0]
+
+    # Save transcription to .txt
+    if transcription is not None:
+        transcript_path = Path(user_dirs['transcripts'], f"{file_stem}.txt")
+        with open(transcript_path, 'w', encoding='utf-8') as f:
+            f.write(transcription)
+
+    # Save note content to .md
+    if note_content is not None:
+        md_path = Path(user_dirs['md'], f"{file_stem}.md")
+        with open(md_path, 'w', encoding='utf-8') as f:
+            f.write(note_content)
+
+
+# ADMIN - Get all notes (all users)
 @notes_bp.route('/all', methods=['GET'])
 @admin_required()
 def admin_get_all_notes():
@@ -300,12 +386,11 @@ def admin_get_all_notes():
     notes_with_users = []
     for note in notes:
         note_dict = note.to_dict()
-        if note.user:
-            note_dict['user'] = {
-                'id': note.user.id,
-                'name': note.user.name,
-                'email': note.user.email
-            }
+        note_dict['user'] = {
+            'id': note.user.id,
+            'name': note.user.name,
+            'email': note.user.email
+        }
         notes_with_users.append(note_dict)
 
     return jsonify({
@@ -316,82 +401,73 @@ def admin_get_all_notes():
 
 @notes_bp.route('/<int:note_id>/export/pdf', methods=['GET'])
 @jwt_required()
-def export_note_pdf(note_id):
-    """Export note to PDF"""
-    current_user_email = get_jwt_identity()
-    user = User.query.filter_by(email=current_user_email).first()
+def export_note_to_pdf(note_id):
+    """Export a note's markdown content to PDF"""
+    email = get_jwt_identity()
+    user = User.query.filter_by(email=email).first()
+
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
     note = Note.query.get(note_id)
 
     if not note:
         return jsonify({'error': 'Note not found'}), 404
 
-    # Sprawdzenie uprawnień
+    # Check authorization
     if note.user_id != user.id and not user.is_admin:
         return jsonify({'error': 'Access denied'}), 403
 
-    # Pobranie treści
-    transcript, note_content = read_note_files(note)
+    # Get user directories
+    user_dirs = get_user_directories(user)
+    file_stem = note.filename.rsplit('.', 1)[0]
+    md_path = Path(user_dirs['md'], f"{file_stem}.md")
 
-    # Tworzenie PDF w pamięci
-    buffer = BytesIO()
-    p = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
-    y = height - 50
+    if not os.path.exists(md_path):
+        return jsonify({'error': 'Note content not found'}), 404
 
-    # Prosta konfiguracja czcionki (uwaga: domyślna czcionka może nie obsługiwać polskich znaków)
-    # Aby w pełni obsługiwać PL znaki, należałoby załadować czcionkę .ttf (np. Arial)
-    # Tutaj używamy standardowej Helveticy, która może nie wyświetlać "ąę" poprawnie bez dodatkowej konfiguracji
-    p.setFont("Helvetica-Bold", 16)
-    p.drawString(50, y, f"Notatka: {note.title}")
-    y -= 30
+    # Read markdown file
+    with open(md_path, 'r', encoding='utf-8') as f:
+        md_content = f.read()
 
-    p.setFont("Helvetica", 12)
-    p.drawString(50, y, f"Data: {note.created_at}")
-    y -= 50
+    # Create temporary PDF file
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+        pdf_path = tmp_file.name
 
-    # Funkcja pomocnicza do pisania tekstu wielowierszowego
-    def draw_text_block(text, y_pos):
-        if not text:
-            return y_pos
-        text_lines = text.split('\n')
-        for line in text_lines:
-            if y_pos < 50:
-                p.showPage()
-                p.setFont("Helvetica", 12)
-                y_pos = height - 50
+    try:
+        # Create PDF with title header
+        pdf = MarkdownPdf(toc_level=2)
 
-            # Proste zawijanie tekstu (dla pełnej obsługi warto użyć Paragraph z reportlab.platypus)
-            # Tutaj wersja uproszczona ucinająca zbyt długie linie
-            p.drawString(50, y_pos, line[:80])
-            y_pos -= 15
-        return y_pos
+        # Add header with note title and date
+        header = f"# {note.title}\n\n*Created: {note.created_at.strftime('%B %d, %Y at %H:%M')}*\n\n---\n\n"
+        full_content = header + md_content
 
-    if note_content:
-        p.setFont("Helvetica-Bold", 14)
-        p.drawString(50, y, "Podsumowanie:")
-        y -= 25
-        p.setFont("Helvetica", 12)
-        y = draw_text_block(note_content, y)
-        y -= 30
+        # Add content as a single section
+        pdf.add_section(Section(full_content, toc=False))
 
-    if transcript:
-        if y < 100:
-            p.showPage()
-            y = height - 50
-        p.setFont("Helvetica-Bold", 14)
-        p.drawString(50, y, "Transkrypcja:")
-        y -= 25
-        p.setFont("Helvetica", 12)
-        draw_text_block(transcript, y)
+        # Save to PDF
+        pdf.save(pdf_path)
 
-    p.save()
-    buffer.seek(0)
+    except Exception as e:
+        os.unlink(pdf_path)
+        return jsonify({'error': f'Failed to generate PDF: {str(e)}'}), 500
 
-    filename = f"{note.filename.rsplit('.', 1)[0]}.pdf"
+    # Generate safe filename
+    safe_title = "".join(c for c in note.title if c.isalnum() or c in (' ', '-', '_')).strip()
+    safe_title = safe_title[:50]
+    download_filename = f"{safe_title}.pdf"
 
-    return send_file(
-        buffer,
-        as_attachment=True,
-        download_name=filename,
-        mimetype='application/pdf'
-    )
+    # Send file and cleanup
+    try:
+        return send_file(
+            pdf_path,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=download_filename
+        )
+    finally:
+        # Delete temp file after sending
+        try:
+            os.unlink(pdf_path)
+        except:
+            pass

@@ -12,12 +12,13 @@ def create_app():
     app = Flask(__name__)
 
     # =========================================================================
-    # KONFIGURACJA CORS - POPRAWKA
-    # Dodajemy 127.0.0.1, aby uniknąć problemów gdy frontend jest wywoływany przez IP
+    # KONFIGURACJA CORS
     # =========================================================================
+    # Używamy resources, co jest najbardziej stabilnym sposobem dla Flask-CORS
     CORS(app,
          resources={r"/*": {
-             "origins": ["http://localhost:5173", "http://127.0.0.1:5173"]
+             "origins": ["http://localhost:5173", "http://127.0.0.1:5173"],
+             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
          }},
          supports_credentials=True)
 
@@ -36,9 +37,11 @@ def create_app():
     # Konfiguracja JWT
     app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
     app.config["JWT_ACCESS_COOKIE_NAME"] = "access_token"
+    # WAŻNE: W dev (localhost) SECURE musi być False, bo nie masz HTTPS
     app.config["JWT_COOKIE_SECURE"] = False
     app.config["JWT_COOKIE_HTTPONLY"] = True
     app.config["JWT_COOKIE_CSRF_PROTECT"] = False
+    # SameSite='Lax' jest wymagane, aby cookies działały między portami na localhost
     app.config["JWT_COOKIE_SAMESITE"] = "Lax"
 
     Path(app.config['UPLOAD_FOLDER']).mkdir(parents=True, exist_ok=True)
@@ -77,7 +80,8 @@ def init_admin_user(app):
 
                 db.session.add(admin)
                 db.session.commit()
-                admin.create_user_directory()
+                if hasattr(admin, 'create_user_directory'):
+                     admin.create_user_directory()
                 print(f"Admin user created - Email: admin@system.com")
         except Exception as e:
             print(f"Admin initialization skipped or failed: {e}")
@@ -85,5 +89,4 @@ def init_admin_user(app):
 
 if __name__ == '__main__':
     app = create_app()
-    # KLUCZOWA ZMIANA: host='0.0.0.0' jest wymagany dla Dockera
     app.run(host='0.0.0.0', port=5000, debug=True)
