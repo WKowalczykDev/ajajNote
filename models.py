@@ -5,7 +5,7 @@ from datetime import datetime
 
 from flask import current_app
 
-from init import db
+from extensions import db
 
 
 class Note(db.Model):
