@@ -1,9 +1,8 @@
 import os
-
 from flask import Flask
 from pathlib import Path
-
 from werkzeug.security import generate_password_hash
+from flask_cors import CORS  # <--- DODAJ IMPORT
 
 from extensions import jwt, db
 from models import User
@@ -12,20 +11,26 @@ from models import User
 def create_app():
     app = Flask(__name__)
 
+    # Konfiguracja CORS
+    # Zezwalamy na żądania z localhost:5173 (Twój frontend) i obsługę ciasteczek (credentials)
+    CORS(app, resources={r"/*": {"origins": ["http://localhost:5173"]}},
+         supports_credentials=True)  # <--- DODAJ TĘ LINIĘ
+
     # Configuration
     app.config['SECRET_KEY'] = 'your-secret-key-change-in-production'
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///transcriptions.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['UPLOAD_FOLDER'] = Path('../database/Users')
-    app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 50MB max file size
+    # ... reszta Twojej konfiguracji bez zmian ...
+    app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024
     app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
     app.config["JWT_ACCESS_COOKIE_NAME"] = "access_token"
-    app.config["JWT_COOKIE_SECURE"] = True  # only HTTPS
-    app.config["JWT_COOKIE_HTTPONLY"] = True  # JS cannot read cookie
-    app.config["JWT_COOKIE_CSRF_PROTECT"] = False  # JS cannot read cookie #TODO
-    app.config["JWT_COOKIE_SAMESITE"] = "Strict"
-    app.config["ADMIN_LOGIN"] = "admin"
-    app.config["ADMIN_PASSWORD"] = "admin123"
+    app.config["JWT_COOKIE_SECURE"] = False  # WAŻNE: Na localhost ustaw False, na produkcji True
+    app.config["JWT_COOKIE_HTTPONLY"] = True
+    app.config["JWT_COOKIE_CSRF_PROTECT"] = False
+    app.config["JWT_COOKIE_SAMESITE"] = "Lax"  # Zmień ze 'Strict' na 'Lax' lub 'None' dla dev
+
+    # ... reszta pliku bez zmian ...
 
     # Create upload directory if it doesn't exist
     Path(app.config['UPLOAD_FOLDER']).mkdir(exist_ok=True)
@@ -37,7 +42,7 @@ def create_app():
     from routes.user import auth_bp
     app.register_blueprint(auth_bp)
 
-    from routes.notes import  notes_bp
+    from routes.notes import notes_bp
     app.register_blueprint(notes_bp)
 
     # Create database tables
@@ -45,7 +50,6 @@ def create_app():
         db.create_all()
 
     init_admin_user(app)
-
 
     return app
 
