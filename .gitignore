@@ -21,3 +21,8 @@ __pycache__/
 # Systemowe
 .DS_Store
 Thumbs.db
+# Node
+frontend/node_modules/
+dist/
+
+*.db
