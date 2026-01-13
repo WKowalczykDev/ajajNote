@@ -1,0 +1,3 @@
+[0.72s - 23.00s] A:
+Rejestrator głosu. Nasz rejestrator głosu to wygodne i proste narzędzie online, z którego możesz korzystać bezpośrednio w swojej przeglądarce. Umożliwia rejestrację twojego głosu za pomocą mikrofonu i zapisuje głos w pliku MP3. Ustawienia mikrofonu. Możesz dostosować ustawienia swojego mikrofonu za pomocą standardowych narzędzi Adobe Flash Player, zmniejszenie echa i dostosowanie poziomu głośności.
+

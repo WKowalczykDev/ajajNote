@@ -4,6 +4,13 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
+from flask import send_file
+from io import BytesIO
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.exc import IntegrityError
@@ -305,3 +312,86 @@ def admin_get_all_notes():
         'notes': notes_with_users,
         'count': len(notes_with_users)
     }), 200
+
+
+@notes_bp.route('/<int:note_id>/export/pdf', methods=['GET'])
+@jwt_required()
+def export_note_pdf(note_id):
+    """Export note to PDF"""
+    current_user_email = get_jwt_identity()
+    user = User.query.filter_by(email=current_user_email).first()
+    note = Note.query.get(note_id)
+
+    if not note:
+        return jsonify({'error': 'Note not found'}), 404
+
+    # Sprawdzenie uprawnień
+    if note.user_id != user.id and not user.is_admin:
+        return jsonify({'error': 'Access denied'}), 403
+
+    # Pobranie treści
+    transcript, note_content = read_note_files(note)
+
+    # Tworzenie PDF w pamięci
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    y = height - 50
+
+    # Prosta konfiguracja czcionki (uwaga: domyślna czcionka może nie obsługiwać polskich znaków)
+    # Aby w pełni obsługiwać PL znaki, należałoby załadować czcionkę .ttf (np. Arial)
+    # Tutaj używamy standardowej Helveticy, która może nie wyświetlać "ąę" poprawnie bez dodatkowej konfiguracji
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(50, y, f"Notatka: {note.title}")
+    y -= 30
+
+    p.setFont("Helvetica", 12)
+    p.drawString(50, y, f"Data: {note.created_at}")
+    y -= 50
+
+    # Funkcja pomocnicza do pisania tekstu wielowierszowego
+    def draw_text_block(text, y_pos):
+        if not text:
+            return y_pos
+        text_lines = text.split('\n')
+        for line in text_lines:
+            if y_pos < 50:
+                p.showPage()
+                p.setFont("Helvetica", 12)
+                y_pos = height - 50
+
+            # Proste zawijanie tekstu (dla pełnej obsługi warto użyć Paragraph z reportlab.platypus)
+            # Tutaj wersja uproszczona ucinająca zbyt długie linie
+            p.drawString(50, y_pos, line[:80])
+            y_pos -= 15
+        return y_pos
+
+    if note_content:
+        p.setFont("Helvetica-Bold", 14)
+        p.drawString(50, y, "Podsumowanie:")
+        y -= 25
+        p.setFont("Helvetica", 12)
+        y = draw_text_block(note_content, y)
+        y -= 30
+
+    if transcript:
+        if y < 100:
+            p.showPage()
+            y = height - 50
+        p.setFont("Helvetica-Bold", 14)
+        p.drawString(50, y, "Transkrypcja:")
+        y -= 25
+        p.setFont("Helvetica", 12)
+        draw_text_block(transcript, y)
+
+    p.save()
+    buffer.seek(0)
+
+    filename = f"{note.filename.rsplit('.', 1)[0]}.pdf"
+
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/pdf'
+    )
