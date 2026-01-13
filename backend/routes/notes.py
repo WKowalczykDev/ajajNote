@@ -7,9 +7,9 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.exc import IntegrityError
 
-from init import db
+from init import db          # Dwie kropki = katalog wyżej
 from models import Note, User
-from routes.user import admin_required
+from routes.user import admin_required # Jedna kropka = ten sam katalog
 from textTransform.transform import transform
 
 notes_bp = Blueprint('notes', __name__, url_prefix='/notes')

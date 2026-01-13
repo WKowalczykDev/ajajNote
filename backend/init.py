@@ -16,7 +16,7 @@ def create_app():
     app.config['SECRET_KEY'] = 'your-secret-key-change-in-production'
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///transcriptions.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['UPLOAD_FOLDER'] = Path('Users')
+    app.config['UPLOAD_FOLDER'] = Path('../database/Users')
     app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 50MB max file size
     app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
     app.config["JWT_ACCESS_COOKIE_NAME"] = "access_token"
