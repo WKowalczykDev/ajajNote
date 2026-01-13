@@ -1,8 +1,8 @@
 import os
 
-from textTransform.audio_transcriber_assemblyai import AudioTranscriber
-from textTransform.summary_gemini import TranscriptionAnalyzer
-from textTransform import config
+from audio_transcriber_assemblyai import AudioTranscriber
+from summary_gemini import TranscriptionAnalyzer
+import config
 
 
 def transform(input, transcript_dir, note, filename):

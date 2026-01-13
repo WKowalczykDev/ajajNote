@@ -1,3 +1,4 @@
+import requests
 import os
 import uuid
 from datetime import datetime
@@ -7,10 +8,12 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.exc import IntegrityError
 
-from init import db          # Dwie kropki = katalog wyżej
+from init import db
 from models import Note, User
-from routes.user import admin_required # Jedna kropka = ten sam katalog
-from textTransform.transform import transform
+from routes.user import admin_required
+
+# Adres mikroserwisu zdefiniowany w docker-compose
+TEXT_TRANSFORM_URL = os.getenv('TEXT_TRANSFORM_URL', 'http://text-transform:5001')
 
 notes_bp = Blueprint('notes', __name__, url_prefix='/notes')
 ALLOWED_EXTENSIONS = {'mp3', 'wav'}
@@ -27,7 +30,6 @@ def send_audio():
     identity = get_jwt_identity()
     user = User.query.filter_by(email=identity).first()
     try:
-        # Check if audio file is present
         if 'audio' not in request.files:
             return jsonify({'error': 'No audio file provided'}), 400
 
@@ -35,7 +37,7 @@ def send_audio():
 
         if audio_file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
-        print(audio_file.filename)
+
         if not is_allowed_file(audio_file.filename):
             return jsonify({'error': 'Invalid file type. Allowed: mp3, wav, ogg, m4a, flac'}), 400
 
@@ -43,11 +45,11 @@ def send_audio():
         file_extension = audio_file.filename.rsplit('.', 1)[1].lower()
         unique_filename = f"{uuid.uuid4()}.{file_extension}"
 
-        # Save file
-        file_path = user.private_directory / Path("uploads") /  unique_filename
+        # Save file to shared volume
+        file_path = user.private_directory / Path("uploads") / unique_filename
         audio_file.save(str(file_path))
 
-        # Get title from form data or use default
+        # Get title
         title = request.form.get('title', f'Recording {datetime.now().strftime("%Y-%m-%d %H:%M")}')
 
         # Create database entry
@@ -77,11 +79,14 @@ def send_audio():
 @notes_bp.route('/process/<int:note_id>', methods=['POST'])
 @jwt_required()
 def process_audio(note_id):
+    """
+    Wysyła żądanie przetworzenia notatki do mikroserwisu textTransform.
+    """
     user_email = get_jwt_identity()
     user = User.query.filter_by(email=user_email).first()
-
     note = Note.query.filter_by(id=note_id).first()
 
+    # Walidacja uprawnień i istnienia zasobów
     if not user:
         return jsonify({'error': 'No user found'}), 404
 
@@ -94,24 +99,43 @@ def process_audio(note_id):
     if note.status == 'processed':
         return jsonify({'error': 'Note already processed'}), 400
 
-    directories = get_user_directories(user)
-    msg, status = transform(input = directories['uploads'],
-              transcript_dir=directories['transcripts'],
-              note=directories['md'],
-              filename = note.filename)
+    # Komunikacja z mikroserwisem textTransform
+    try:
+        # Wysyłamy filename i user_id, mikroserwis sam ogarnie ścieżki na współdzielonym wolumenie
+        response = requests.post(f"{TEXT_TRANSFORM_URL}/process", json={
+            "filename": note.filename,
+            "user_id": user.id
+        })
 
-    if status == 200:
+        # Sprawdzamy czy mikroserwis nie zwrócił błędu
+        if response.status_code != 200:
+            try:
+                error_msg = response.json().get('message', 'Unknown error')
+            except:
+                error_msg = response.text
+            return jsonify({'error': f'Processing service error: {error_msg}'}), response.status_code
+
+        response_data = response.json()
+        msg = response_data.get('message', 'Success')
+
+        # Sukces - aktualizacja bazy danych
         note.status = 'processed'
+
+        # Odczytujemy wyniki, które mikroserwis zapisał na dysku
         transcript, note_content = read_note_files(note)
 
         try:
             note.transcription = transcript
             note.note_content = note_content
             db.session.commit()
-        except IntegrityError as e:
+        except IntegrityError:
             db.session.rollback()
+            return jsonify({'error': 'Database error during update'}), 500
 
-    return jsonify({'message': msg}), status
+        return jsonify({'message': msg}), 200
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Communication with processing service failed: {str(e)}'}), 503
 
 
 def get_user_directories(user):
@@ -131,6 +155,7 @@ def get_user_directories(user):
         'md': md_dir,
         'uploads': uploads_dir
     }
+
 
 def read_note_files(note, user_dirs=None):
     """Read transcription and note content from files"""
@@ -158,25 +183,30 @@ def read_note_files(note, user_dirs=None):
 
     return transcription, note_content
 
+
 @notes_bp.route('/<int:note_id>', methods=['DELETE'])
 @jwt_required()
 def delete_note(note_id):
     note = Note.query.filter_by(id=note_id).first()
     identity = get_jwt_identity()
     user = User.query.filter_by(email=identity).first()
-    note_owner = User.query.get(note.user_id)
-    user_dirs = get_user_directories(user)
 
-    if user.id != note_owner.id and  not user.is_admin:
+    if not note:
+        return jsonify({'error': 'Note not found'}), 404
+
+    note_owner = User.query.get(note.user_id)
+    user_dirs = get_user_directories(user if user.is_admin else note_owner)
+
+    if user.id != note_owner.id and not user.is_admin:
         return jsonify({'error': 'You are not authorized to delete this note'}), 401
 
     # Delete transcription file
-    file = note.filename.rstrip('.mp3')
+    file = note.filename.rsplit('.', 1)[0]
     transcript_path = Path(user_dirs['transcripts'], f"{file}.txt")
     if os.path.exists(transcript_path):
         os.remove(transcript_path)
 
-    audio_path = Path(user_dirs['uploads'], f"{file}.mp3")
+    audio_path = Path(user_dirs['uploads'], note.filename)
     if os.path.exists(audio_path):
         os.remove(audio_path)
 
@@ -187,10 +217,11 @@ def delete_note(note_id):
     try:
         db.session.delete(note)
         db.session.commit()
-    except IntegrityError as e:
+    except IntegrityError:
         db.session.rollback()
 
     return jsonify({'status': 'success'}), 200
+
 
 @notes_bp.route('', methods=['GET'])
 @jwt_required()
@@ -218,6 +249,7 @@ def get_notes():
         'count': len(notes)
     }), 200
 
+
 @notes_bp.route('get/<int:note_id>', methods=['POST'])
 @jwt_required()
 def get_note(note_id):
@@ -240,65 +272,6 @@ def get_note(note_id):
     return jsonify({'note': note.to_dict()}), 200
 
 
-# # UPDATE - Update a note
-# @notes_bp.route('/<int:note_id>', methods=['PUT', 'PATCH'])
-# @jwt_required()
-# def update_note(note_id):
-#     """Update a note"""
-#     current_user_id = get_jwt_identity()
-#     user = User.query.get(current_user_id)
-#
-#     if not user:
-#         return jsonify({'error': 'User not found'}), 404
-#
-#     note = Note.query.get(note_id)
-#
-#     if not note:
-#         return jsonify({'error': 'Note not found'}), 404
-#
-#     # Check if user owns the note
-#     if note.user_id != current_user_id:
-#         return jsonify({'error': 'Access denied'}), 403
-#
-#     data = request.get_json()
-#
-#     try:
-#         # Update database fields
-#         if 'title' in data:
-#             note.title = data['title']
-#
-#         if 'meeting_time' in data:
-#             note.meeting_time = datetime.fromisoformat(data['meeting_time']) if data['meeting_time'] else None
-#
-#         if 'status' in data:
-#             note.status = data['status']
-#
-#         # Get user directories
-#         user_dirs = get_user_directories(user)
-#
-#         # Update files if content is provided
-#         if 'transcription' in data:
-#             save_note_files(note, transcription=data['transcription'], user_dirs=user_dirs)
-#             note.transcription = data['transcription']
-#
-#         if 'note_content' in data:
-#             save_note_files(note, note_content=data['note_content'], user_dirs=user_dirs)
-#             note.note_content = data['note_content']
-#
-#         note.updated_at = datetime.now()
-#         db.session.commit()
-#
-#         return jsonify({
-#             'message': 'Note updated successfully',
-#             'note': note.to_dict()
-#         }), 200
-#
-#     except Exception as e:
-#         db.session.rollback()
-#         return jsonify({'error': f'Failed to update note: {str(e)}'}), 500
-
-
-# ADMIN - Get all notes (all users)
 @notes_bp.route('/all', methods=['GET'])
 @admin_required()
 def admin_get_all_notes():
@@ -320,11 +293,12 @@ def admin_get_all_notes():
     notes_with_users = []
     for note in notes:
         note_dict = note.to_dict()
-        note_dict['user'] = {
-            'id': note.user.id,
-            'name': note.user.name,
-            'email': note.user.email
-        }
+        if note.user:
+            note_dict['user'] = {
+                'id': note.user.id,
+                'name': note.user.name,
+                'email': note.user.email
+            }
         notes_with_users.append(note_dict)
 
     return jsonify({
