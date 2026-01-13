@@ -2,21 +2,20 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-# Instalacja zależności systemowych (np. gcc)
-# Jest to często wymagane do kompilacji niektórych bibliotek pythona
+# Instalacja zależności systemowych
 RUN apt-get update && apt-get install -y gcc && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Kopiujemy kod
+# Tworzymy katalog database wewnątrz kontenera
+RUN mkdir -p /app/database
+
 COPY . .
 
-# Ustawiamy zmienną środowiskową wskazującą, gdzie są dane
-ENV UPLOAD_FOLDER=/app/data
+# Aktualizujemy domyślne zmienne (zostaną i tak nadpisane przez docker-compose, ale dla porządku)
+ENV UPLOAD_FOLDER=/app/database/Users
 
-# Port Flask
 EXPOSE 5000
 
-# Uruchomienie
 CMD ["python", "init.py"]

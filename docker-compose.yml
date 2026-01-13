@@ -5,13 +5,16 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./data:/app/data             # Współdzielony folder na pliki i DB SQLite
-      - ./backend:/app               # (Opcjonalnie) Hot-reload kodu w dev
+      # ZMIANA: Mapujemy Twój lokalny folder 'database' do '/app/database' w kontenerze
+      - ./database:/app/database
+      - ./backend:/app
     environment:
       - FLASK_APP=init.py
       - FLASK_DEBUG=1
-      - SQLALCHEMY_DATABASE_URI=sqlite:////app/data/transcriptions.db
-      - UPLOAD_FOLDER=/app/data
+      # ZMIANA: Baza danych ląduje bezpośrednio w zmapowanym folderze
+      - SQLALCHEMY_DATABASE_URI=sqlite:////app/database/transcriptions.db
+      # ZMIANA: Pliki użytkowników trafiają do podfolderu Users w bazie
+      - UPLOAD_FOLDER=/app/database/Users
       - TEXT_TRANSFORM_URL=http://text_transform:5001
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - SECRET_KEY=${SECRET_KEY}
@@ -24,21 +27,19 @@ services:
     ports:
       - "5001:5001"
     volumes:
-      - ./data:/app/data             # TEN SAM folder co w backendzie
-      - ./textTransform:/app         # (Opcjonalnie) Hot-reload kodu
+      # ZMIANA: To samo mapowanie co w backendzie
+      - ./database:/app/database
+      - ./textTransform:/app
     environment:
-      - DATA_DIR=/app/data
+      # ZMIANA: Wskazujemy na ten sam folder Users co backend
+      - DATA_DIR=/app/database/Users
       - ASSEMBLYAI_API_KEY=${ASSEMBLYAI_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      # Konfiguracja modeli z config.py może być tutaj nadpisana jeśli dostosujesz config.py
 
   frontend:
     build: ./frontend
     container_name: ajaj_frontend
     ports:
-      - "5173:80"                    # Mapujemy port 80 kontenera na 5173 hosta (zgodnie z przyzwyczajeniem Vite)
+      - "5173:80"
     depends_on:
       - backend
-
-volumes:
-  ajaj_data:

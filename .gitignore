@@ -26,3 +26,5 @@ frontend/node_modules/
 dist/
 
 *.db
+
+database/
