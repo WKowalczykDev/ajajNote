@@ -1,0 +1,1 @@
+WAV PCM 16-bit, 16 kHz, mono
